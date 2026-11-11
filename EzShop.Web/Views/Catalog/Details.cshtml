@@ -1,0 +1,651 @@
+@model ProductDetailsViewModel
+@{
+    ViewData["Title"] = Model.Product.Name;
+    var p = Model.Product;
+    var inStock = p.InStock;
+    var hasReviews = Model.Reviews.Any();
+    var avgRating = hasReviews ? Model.Reviews.Average(r => r.Rating) : 0.0;
+    var reviewCount = Model.Reviews.Count;
+}
+
+<div class="product-page-container">
+    <!-- Хлебные крошки (рендеринг C#) -->
+    <div class="breadcrumbs" id="breadcrumbs">
+        <a asp-action="Index">Главная</a> <span>/</span>
+        <span id="bcBrand">@p.Brand</span> <span>/</span>
+        <span id="bcName" class="current">@p.Name</span>
+    </div>
+
+    <div class="product-detail-layout" id="productDetailContainer">
+        <!-- Галерея и фичи -->
+        <div class="product-gallery">
+            <div class="product-main-img-box">
+                <span class="product-brand-tag">@p.Brand</span>
+                <img src="@(p.Img.StartsWith("/") ? p.Img : "/" + p.Img)" alt="@p.Name" id="mainProductImg" class="product-detail-img @(!inStock ? "out-of-stock-img" : "")" onerror="this.src='/img/logo.png'">
+            </div>
+            <div class="product-quick-features">
+                <div class="feature-item">
+                    <svg class="ico ico-shield-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                    1 год гарантии
+                </div>
+                <div class="feature-item">
+                    <svg class="ico ico-truck" viewBox="0 0 24 24" aria-hidden="true"><rect width="16" height="13" x="1" y="5" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                    Быстрая доставка по КР
+                </div>
+                <div class="feature-item">
+                    <svg class="ico ico-refresh" viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    14 дней на обмен и возврат
+                </div>
+            </div>
+        </div>
+
+        <!-- Информация о смартфоне и покупка -->
+        <div class="product-info-panel">
+            <div class="product-header-line">
+                <h1 class="product-title">@p.Name</h1>
+                <div class="product-action-icons">
+                    <button type="button" class="btn-compare" data-id="@p.Id" onclick="toggleCompare(@p.Id, event)" title="Сравнить" aria-label="Сравнить">
+                        <svg class="ico ico-scale" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+                    </button>
+                    <button type="button" class="btn-fav" data-id="@p.Id" onclick="toggleFavorite(@p.Id, event)" title="В избранное" aria-label="В избранное">
+                        <svg class="ico ico-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Реальный рейтинг и реальный статус наличия -->
+            <div class="product-rating" id="productTopRating" onclick="scrollToReviews()" style="cursor: pointer;" title="Посмотреть отзывы">
+                @if (hasReviews)
+                {
+                    <span class="stars">@(new string('★', (int)Math.Round(avgRating)))@(new string('☆', Math.Max(0, 5 - (int)Math.Round(avgRating))))</span>
+                    <span class="rating-val">@avgRating.ToString("F1")</span>
+                    <span class="reviews-count">(@reviewCount @(reviewCount == 1 ? "отзыв" : (reviewCount >= 2 && reviewCount <= 4 ? "отзыва" : "отзывов")))</span>
+                }
+                else
+                {
+                    <span class="no-reviews-pill" style="color: var(--muted); font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+                        Пока нет отзывов — будьте первым!
+                    </span>
+                }
+                <span class="stock-status @(inStock ? "in-stock" : "out-of-stock")">
+                    @(inStock ? "● В наличии" : "● Нет в наличии")
+                </span>
+            </div>
+
+            <div class="product-price-box">
+                <div class="product-price">@p.Price.ToString("N0") сом</div>
+            </div>
+
+            <div class="product-specs-grid">
+                <div class="spec-tile">
+                    <span class="spec-tile-label">
+                        <svg class="ico ico-monitor" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+                        Экран
+                    </span>
+                    <span class="spec-tile-val">@p.Display</span>
+                </div>
+                <div class="spec-tile">
+                    <span class="spec-tile-label">
+                        <svg class="ico ico-cpu" viewBox="0 0 24 24" aria-hidden="true"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9"/><path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2"/></svg>
+                        Оперативная память
+                    </span>
+                    <span class="spec-tile-val">@p.Ram ГБ</span>
+                </div>
+                <div class="spec-tile">
+                    <span class="spec-tile-label">
+                        <svg class="ico ico-layers" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                        Накопитель
+                    </span>
+                    <span class="spec-tile-val">@p.Storage ГБ</span>
+                </div>
+                <div class="spec-tile">
+                    <span class="spec-tile-label">
+                        <svg class="ico ico-battery" viewBox="0 0 24 24" aria-hidden="true"><rect width="16" height="10" x="2" y="7" rx="2" ry="2"/><line x1="22" x2="22" y1="11" y2="13"/></svg>
+                        Аккумулятор
+                    </span>
+                    <span class="spec-tile-val">@p.Battery мАч</span>
+                </div>
+                <div class="spec-tile">
+                    <span class="spec-tile-label">
+                        <svg class="ico ico-palette" viewBox="0 0 24 24" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+                        Цвет корпуса
+                    </span>
+                    <span class="spec-tile-val">@p.Color</span>
+                </div>
+            </div>
+
+            <p class="product-description-text">
+                @(string.IsNullOrWhiteSpace(p.Description) ? "Современный высокопроизводительный смартфон, сочетающий флагманские технологии, качественный дисплей, передовую камеру и длительное время автономной работы." : p.Description)
+            </p>
+
+            <div class="purchase-controls">
+                @if (inStock)
+                {
+                    <div class="qty-selector">
+                        <button type="button" onclick="changeDetailQty(-1)">-</button>
+                        <input type="number" id="detailQty" value="1" min="1" max="10" readonly>
+                        <button type="button" onclick="changeDetailQty(1)">+</button>
+                    </div>
+                    <button type="button" class="btn-buy-primary" onclick="addCurrentProductToCart(@p.Id)">
+                        <svg class="ico ico-cart" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                        Добавить в корзину
+                    </button>
+                    <button type="button" class="btn-buy-instant" onclick="openDirectBuyModal(@p.Id, '@Html.Raw(p.Name.Replace("'", "\\'"))', @p.Price)">
+                        <svg class="ico ico-zap" viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        Купить в 1 клик
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="btn-buy-primary" disabled>Нет в наличии</button>
+                    <button type="button" class="btn-buy-instant" disabled>Недоступно</button>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно быстрой покупки в 1 клик (C# POST) -->
+    <div id="quickBuyModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:9999; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(6px);">
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:28px; max-width:440px; width:100%; box-shadow:var(--shadow-lg);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h3 style="color:var(--text); font-size:18px; font-weight:800; margin:0;">Купить в 1 клик</h3>
+                <button type="button" onclick="closeDirectBuyModal()" style="background:none; border:none; color:var(--muted); font-size:24px; cursor:pointer;">&times;</button>
+            </div>
+            <p style="color:var(--muted); font-size:13.5px; margin-bottom:16px;">Заполните контакты, и мы сразу отправим уведомление о заказе в Telegram.</p>
+            <form id="quickBuyForm" onsubmit="handleQuickBuySubmit(event)">
+                <input type="hidden" name="productId" id="quickBuyProductId" value="@p.Id" />
+                <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+                    <input type="text" name="customerName" id="quickBuyName" placeholder="Ваше имя" required value="@User.Identity?.Name"
+                           style="padding:10px 14px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-size:14px;" />
+                    <input type="tel" name="customerPhone" id="quickBuyPhone" placeholder="Номер телефона (+996...)" required
+                           style="padding:10px 14px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-size:14px;" />
+                    <input type="text" name="customerAddress" id="quickBuyAddress" placeholder="Адрес доставки в Бишкеке / КР" required
+                           style="padding:10px 14px; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-size:14px;" />
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button type="submit" id="quickBuySubmitBtn" class="btn btn-primary" style="flex:1; padding:12px; font-weight:700;">Подтвердить заказ</button>
+                    <button type="button" class="btn btn-ghost" onclick="closeDirectBuyModal()" style="padding:12px 18px;">Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3D-разбор смартфона при прокрутке -->
+    <section class="phone-story" id="phoneStory" aria-label="Разбор смартфона по частям" hidden></section>
+
+    <!-- Цены в магазинах -->
+    <section class="price-section" id="priceSection" aria-label="Цены в магазинах"></section>
+
+    <!-- Секция отзывов покупателей (рендеринг C# из БД) -->
+    <section class="reviews-section" id="reviewsSection">
+        <div class="reviews-header-block">
+            <div class="reviews-header-left" id="reviewsHeaderLeft">
+                @if (hasReviews)
+                {
+                    <div class="reviews-big-score">@avgRating.ToString("F1")</div>
+                    <div>
+                        <div class="reviews-stars-display">@(new string('★', (int)Math.Round(avgRating)))@(new string('☆', Math.Max(0, 5 - (int)Math.Round(avgRating))))</div>
+                        <div class="reviews-total-text">Рейтинг на основе @reviewCount @(reviewCount == 1 ? "отзыва" : "отзывов")</div>
+                    </div>
+                }
+                else
+                {
+                    <div class="reviews-big-score" style="font-size: 28px; color: var(--muted);">—</div>
+                    <div>
+                        <div style="font-size: 16px; font-weight: 700; color: var(--text);">Пока нет оценок</div>
+                        <div class="reviews-total-text">У этого смартфона ещё нет отзывов. Станьте первым!</div>
+                    </div>
+                }
+            </div>
+            <button type="button" class="btn-open-review-form" onclick="toggleReviewForm()">
+                Написать отзыв
+            </button>
+        </div>
+
+        <!-- Форма добавления отзыва (C# POST в CatalogController.AddReview) -->
+        <div class="review-form-box" id="reviewFormBox" style="display: none;">
+            <h3>Ваш отзыв о смартфоне</h3>
+            <form asp-action="AddReview" method="post" onsubmit="handleReviewSubmit(event)">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ProductId" value="@p.Id" />
+                <div class="star-rating-select" id="starPicker">
+                    <span style="font-size: 14px; color: var(--muted); margin-right: 8px;">Ваша оценка:</span>
+                    <span class="star-pick active" data-val="1" onclick="setReviewRating(1)">★</span>
+                    <span class="star-pick active" data-val="2" onclick="setReviewRating(2)">★</span>
+                    <span class="star-pick active" data-val="3" onclick="setReviewRating(3)">★</span>
+                    <span class="star-pick active" data-val="4" onclick="setReviewRating(4)">★</span>
+                    <span class="star-pick active" data-val="5" onclick="setReviewRating(5)">★</span>
+                    <input type="hidden" name="Rating" id="reviewRatingInput" value="5" />
+                    <span id="starRatingLabel" style="font-size: 13px; font-weight: 700; color: #facc15; margin-left: 10px;">5 из 5</span>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <input type="text" name="Author" id="reviewAuthorInput" class="admin-input" placeholder="Ваше имя" required value="@User.Identity?.Name" />
+                </div>
+
+                <textarea name="Text" id="reviewTextInput" class="review-textarea" rows="3" placeholder="Расскажите о впечатлениях: что понравилось, как держит батарея, как снимает камера..." required></textarea>
+
+                <div class="review-form-actions">
+                    <button type="submit" class="auth-btn" style="width: auto; padding: 10px 24px;">Опубликовать отзыв</button>
+                    <button type="button" class="admin-btn admin-btn-secondary" onclick="toggleReviewForm()">Отмена</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Список реальных отзывов из БД C# -->
+        <div class="reviews-list" id="reviewsList">
+            @if (!Model.Reviews.Any())
+            {
+                <div style="text-align: center; color: var(--muted); padding: 40px 20px;">
+                    <h4>Пока нет отзывов</h4>
+                    <p style="font-size: 13px; margin-top: 4px;">Будьте первым, кто поделится своим мнением об этом смартфоне!</p>
+                </div>
+            }
+            else
+            {
+                @foreach (var r in Model.Reviews)
+                {
+                    <div class="review-card" id="reviewCard_@r.Id">
+                        <div class="review-header">
+                            <div class="review-user-info">
+                                <div class="review-avatar">@((string.IsNullOrEmpty(r.Author) ? "П" : r.Author.Substring(0, 1)).ToUpper())</div>
+                                <div>
+                                    <span class="review-author-name">@r.Author</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span class="review-stars">@(new string('★', r.Rating))@(new string('☆', Math.Max(0, 5 - r.Rating)))</span>
+                                <span class="review-date" style="margin-left: 10px;">@r.CreatedAt.ToString("dd.MM.yyyy")</span>
+                                @if (User.IsInRole("Admin") || string.Equals(User.Identity?.Name, "admin", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <button type="button" class="admin-btn-delete-review" onclick="deleteReview(@r.Id)" title="Удалить отзыв (Администратор)" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#ef4444; cursor:pointer; font-size:12px; padding:4px 8px; border-radius:6px; margin-left:8px; display:inline-flex; align-items:center; gap:4px;">
+                                        🗑️ Удалить
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                        <p class="review-text">@r.Text</p>
+                    </div>
+                }
+            }
+        </div>
+    </section>
+
+    <!-- Похожие модели (полностью отрендерены сервером C# со стилями .card) -->
+    <section class="similar-section">
+        <h2 class="section-title">Похожие модели</h2>
+        <div class="products" id="similarProducts">
+            @foreach (var sp in Model.SimilarProducts)
+            {
+                <div class="card" data-id="@sp.Id" data-brand="@sp.Brand" data-price="@sp.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                    <a href="/Catalog/Details/@sp.Id" class="card-img-link" aria-label="@sp.Name">
+                        <img src="@(sp.Img.StartsWith("/") ? sp.Img : "/" + sp.Img)" alt="@sp.Name" loading="lazy" @(!sp.InStock ? "style=\"opacity: 0.6; filter: grayscale(.5);\"" : "") onerror="this.src='/img/logo.png'">
+                    </a>
+                    <div class="card-badges">
+                        <button type="button" class="btn-compare" data-id="@sp.Id" onclick="toggleCompare(@sp.Id, event)" title="Добавить к сравнению" aria-label="Сравнить @sp.Name">
+                            <svg class="ico ico-scale" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+                        </button>
+                        <button type="button" class="btn-fav" data-id="@sp.Id" onclick="toggleFavorite(@sp.Id, event)" title="В избранное" aria-label="В избранное @sp.Name">
+                            <svg class="ico ico-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-meta">
+                            <span class="card-brand">@sp.Brand</span>
+                            <span class="card-stock @(sp.InStock ? "in-stock" : "out-of-stock")">
+                                @(sp.InStock ? "● В наличии" : "● Нет в наличии")
+                            </span>
+                        </div>
+                        <a href="/Catalog/Details/@sp.Id" class="card-title-link">
+                            <h3>@sp.Name</h3>
+                        </a>
+                        <div class="specs">
+                            <span class="spec-pill">@sp.Display</span>
+                            <span class="spec-pill">@sp.Ram/@sp.Storage ГБ</span>
+                            <span class="spec-pill">@sp.Battery мАч</span>
+                        </div>
+                        <div class="price">@sp.Price.ToString("N0") <small>сом</small></div>
+                    </div>
+                    <div class="card-actions">
+                        @if (sp.InStock)
+                        {
+                            <button type="button" class="btn-add-cart" onclick="addToCart(@sp.Id, 1)">В корзину</button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn-add-cart" disabled>Нет в наличии</button>
+                        }
+                        <a href="/Catalog/Details/@sp.Id" class="btn-details" title="Подробнее">Инфо</a>
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        function changeDetailQty(delta) {
+            const el = document.getElementById('detailQty');
+            if (!el) return;
+            let v = parseInt(el.value) || 1;
+            v = Math.max(1, Math.min(10, v + delta));
+            el.value = v;
+        }
+
+        async function deleteReview(reviewId) {
+            if (!confirm('Вы действительно хотите удалить этот отзыв?')) return;
+            try {
+                const resp = await fetch('/Admin/DeleteReview/' + reviewId, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const data = await resp.json().catch(() => ({}));
+                if (resp.ok && data.success !== false) {
+                    const card = document.getElementById('reviewCard_' + reviewId);
+                    if (card) card.remove();
+                    if (typeof showToast === 'function') {
+                        showToast('Отзыв успешно удален', 'success');
+                    }
+                    setTimeout(() => location.reload(), 400);
+                } else {
+                    alert(data.message || 'Не удалось удалить отзыв');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Ошибка связи с сервером');
+            }
+        }
+        function scrollToReviews() {
+            const el = document.getElementById('reviewsSection');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function toggleReviewForm() {
+            const box = document.getElementById('reviewFormBox');
+            if (!box) return;
+            const isHidden = box.style.display === 'none';
+            box.style.display = isHidden ? 'block' : 'none';
+            if (isHidden) {
+                box.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function setReviewRating(rating) {
+            const stars = document.querySelectorAll('.star-pick');
+            stars.forEach(s => {
+                const val = parseInt(s.getAttribute('data-val'));
+                if (val <= rating) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+            const input = document.getElementById('reviewRatingInput');
+            if (input) input.value = rating;
+            const label = document.getElementById('starRatingLabel');
+            if (label) label.textContent = `${rating} из 5`;
+        }
+
+        async function handleReviewSubmit(e) {
+            e.preventDefault();
+            const form = e.target;
+            const btn = form.querySelector('button[type="submit"]');
+            const author = (document.getElementById('reviewAuthorInput')?.value || '').trim() || 'Гость';
+            const text = (document.getElementById('reviewTextInput')?.value || '').trim();
+            const rating = parseInt(document.getElementById('reviewRatingInput')?.value) || 5;
+
+            if (!text) {
+                if (typeof showToast === 'function') showToast('Пожалуйста, напишите текст отзыва.', 'error');
+                return;
+            }
+
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Публикация...';
+            }
+
+            try {
+                const formData = new FormData(form);
+                const resp = await fetch(form.action || '/Catalog/AddReview', {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData
+                });
+
+                if (resp.ok) {
+                    let newReviewId = 0;
+                    try {
+                        const resData = await resp.json();
+                        if (resData && resData.review && resData.review.id) {
+                            newReviewId = resData.review.id;
+                        }
+                    } catch (e) {}
+
+                    // Создаем карточку отзыва без перезагрузки (AJAX)
+                    const reviewsList = document.getElementById('reviewsList');
+                    if (reviewsList) {
+                        const emptyPlaceholder = reviewsList.querySelector('h4');
+                        if (emptyPlaceholder) reviewsList.innerHTML = '';
+
+                        const isUserAdmin = @((User.IsInRole("Admin") || string.Equals(User.Identity?.Name, "admin", StringComparison.OrdinalIgnoreCase)) ? "true" : "false");
+                        const card = document.createElement('div');
+                        card.className = 'review-card';
+                        if (newReviewId > 0) {
+                            card.id = 'reviewCard_' + newReviewId;
+                        }
+                        const initialLetter = (author || 'П').charAt(0).toUpperCase();
+                        const starStr = '★'.repeat(rating) + '☆'.repeat(Math.max(0, 5 - rating));
+                        const deleteBtnHtml = (isUserAdmin && newReviewId > 0)
+                            ? `<button type="button" class="admin-btn-delete-review" onclick="deleteReview(${newReviewId})" title="Удалить отзыв (Администратор)" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#ef4444; cursor:pointer; font-size:12px; padding:4px 8px; border-radius:6px; margin-left:8px; display:inline-flex; align-items:center; gap:4px;">🗑️ Удалить</button>`
+                            : '';
+                        card.innerHTML = `
+                            <div class="review-header">
+                                <div class="review-user-info">
+                                    <div class="review-avatar">${initialLetter}</div>
+                                    <div>
+                                        <span class="review-author-name">${window.escapeHtml ? window.escapeHtml(author) : author}</span>
+                                    </div>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span class="review-stars">${starStr}</span>
+                                    <span class="review-date" style="margin-left: 10px;">Только что</span>
+                                    ${deleteBtnHtml}
+                                </div>
+                            </div>
+                            <p class="review-text">${window.escapeHtml ? window.escapeHtml(text) : text}</p>
+                        `;
+                        reviewsList.prepend(card);
+                    }
+
+                    // Обновляем счетчик отзывов и рейтинг
+                    const allCards = document.querySelectorAll('.review-card');
+                    const newCount = allCards.length;
+                    let totalRating = 0;
+                    allCards.forEach(c => {
+                        const stars = (c.querySelector('.review-stars')?.textContent || '').match(/★/g);
+                        totalRating += stars ? stars.length : 5;
+                    });
+                    const newAvg = (totalRating / (newCount || 1));
+                    const newAvgStr = newAvg.toFixed(1).replace('.', ',');
+                    const starRounded = Math.round(newAvg);
+                    const starsStr = '★'.repeat(starRounded) + '☆'.repeat(Math.max(0, 5 - starRounded));
+
+                    // Обновляем плашку вверху
+                    const topRating = document.getElementById('productTopRating');
+                    if (topRating) {
+                        const inStockSpan = topRating.querySelector('.stock-status');
+                        const stockHtml = inStockSpan ? inStockSpan.outerHTML : '';
+                        const declension = newCount === 1 ? 'отзыв' : (newCount >= 2 && newCount <= 4 ? 'отзыва' : 'отзывов');
+                        topRating.innerHTML = `
+                            <span class="stars">${starsStr}</span>
+                            <span class="rating-val">${newAvgStr}</span>
+                            <span class="reviews-count">(${newCount} ${declension})</span>
+                            ${stockHtml}
+                        `;
+                    }
+
+                    // Обновляем блок отзывов
+                    const headerLeft = document.getElementById('reviewsHeaderLeft');
+                    if (headerLeft) {
+                        const declension = newCount === 1 ? 'отзыва' : 'отзывов';
+                        headerLeft.innerHTML = `
+                            <div class="reviews-big-score">${newAvgStr}</div>
+                            <div>
+                                <div class="reviews-stars-display">${starsStr}</div>
+                                <div class="reviews-total-text">Рейтинг на основе ${newCount} ${declension}</div>
+                            </div>
+                        `;
+                    }
+
+                    // Очищаем форму и закрываем
+                    const textEl = document.getElementById('reviewTextInput');
+                    if (textEl) textEl.value = '';
+                    setReviewRating(5);
+                    toggleReviewForm();
+
+                    if (typeof showToast === 'function') {
+                        showToast('Спасибо! Ваш отзыв успешно опубликован.', 'success');
+                    }
+                    return;
+                }
+            } catch (err) {
+                console.warn('AJAX review submit error:', err);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Опубликовать отзыв';
+                }
+            }
+        }
+
+        function openDirectBuyModal(id, name, price) {
+            const modal = document.getElementById('quickBuyModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.getElementById('quickBuyName')?.focus();
+            }
+        }
+
+        function closeDirectBuyModal() {
+            const modal = document.getElementById('quickBuyModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function handleQuickBuySubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('quickBuySubmitBtn');
+            const name = document.getElementById('quickBuyName')?.value?.trim();
+            const phone = document.getElementById('quickBuyPhone')?.value?.trim();
+            const address = document.getElementById('quickBuyAddress')?.value?.trim();
+            const productId = parseInt(document.getElementById('quickBuyProductId')?.value) || @p.Id;
+
+            if (!name || !phone || !address) {
+                if (typeof showToast === 'function') showToast('Заполните имя, телефон и адрес.', 'error');
+                return;
+            }
+
+            const cleanPhone = (phone || '').replace(/[\s\-\(\)\.]/g, '');
+            const isKg = /^\+?996[23579]\d{8}$/.test(cleanPhone) || /^\+?996\d{9}$/.test(cleanPhone) || /^0[23579]\d{8}$/.test(cleanPhone) || /^0\d{9}$/.test(cleanPhone);
+            if (!isKg) {
+                if (typeof showToast === 'function') {
+                    showToast('Номер телефона должен быть в формате Кыргызстана (+996XXXXXXXXX или 0XXXXXXXXX)', 'error');
+                }
+                document.getElementById('quickBuyPhone')?.focus();
+                return;
+            }
+
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Оформление...';
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('productId', productId);
+                formData.append('customerName', name);
+                formData.append('customerPhone', phone);
+                formData.append('customerAddress', address);
+
+                const resp = await fetch('/Orders/CreateDirect', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData
+                });
+
+                if (resp.ok) {
+                    const data = await resp.json();
+                    closeDirectBuyModal();
+                    if (typeof showToast === 'function') {
+                        showToast(data.message || 'Заказ успешно оформлен! Менеджер свяжется с вами.', 'success');
+                    }
+                    return;
+                } else {
+                    const errData = await resp.json().catch(() => ({}));
+                    if (typeof showToast === 'function') {
+                        showToast(errData.message || 'Ошибка оформления заказа. Проверьте введенные данные.', 'error');
+                    }
+                }
+            } catch (err) {
+                console.error('Quick buy submit failed:', err);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Подтвердить заказ';
+                }
+            }
+        }
+
+        function addCurrentProductToCart(id) {
+            const qty = parseInt(document.getElementById('detailQty')?.value) || 1;
+            const prod = {
+                id: @p.Id,
+                name: '@Html.Raw(p.Name.Replace("'", "\\'"))',
+                brand: '@Html.Raw(p.Brand.Replace("'", "\\'"))',
+                price: @p.Price.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                img: '@Html.Raw(p.Img.Replace("'", "\\'"))',
+                inStock: @(inStock ? "true" : "false")
+            };
+
+            if (typeof addToCart === 'function') {
+                addToCart(prod, qty);
+            } else {
+                // Прямое добавление в localStorage корзины
+                let cartKey = 'cart_guest';
+                try {
+                    const u = JSON.parse(localStorage.getItem('ez_user') || 'null');
+                    if (u && u.id) cartKey = 'cart_' + u.id;
+                } catch(e) {}
+
+                let cartItems = [];
+                try { cartItems = JSON.parse(localStorage.getItem(cartKey)) || []; } catch(e) {}
+                const existing = cartItems.find(x => x.id === prod.id);
+                if (existing) {
+                    existing.qty = Math.min(10, (existing.qty || 1) + qty);
+                } else {
+                    cartItems.push({ ...prod, qty });
+                }
+                localStorage.setItem(cartKey, JSON.stringify(cartItems));
+
+                const totalQty = cartItems.reduce((s, i) => s + (i.qty || 1), 0);
+                document.querySelectorAll('.nav-cart-count, #cartCount, #navCartCount').forEach(el => {
+                    el.textContent = totalQty;
+                });
+
+                if (typeof showToast === 'function') {
+                    showToast(`${prod.name} добавлен в корзину (${qty} шт.) 🛒`, 'success');
+                }
+            }
+        }
+
+        function addToCartById(id, e) {
+            if (e) e.stopPropagation();
+            if (typeof addToCart === 'function') {
+                addToCart(id, 1);
+            }
+        }
+    </script>
+}

@@ -1,0 +1,18 @@
+@model ErrorViewModel
+@{
+    ViewData["Title"] = "Ошибка";
+}
+
+<div style="max-width: 700px; margin: 60px auto; padding: 40px 24px; text-align: center; background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 18px;">
+    <h1 style="color: #f87171; font-size: 28px; margin-bottom: 12px;">⚠️ Произошла ошибка</h1>
+    <p style="color: #cbd5e1; font-size: 16px; margin-bottom: 24px;">@Model.ErrorMessage</p>
+
+    @if (Model.ShowRequestId)
+    {
+        <p style="color: #64748b; font-size: 13px; font-family: monospace;">Идентификатор запроса: @Model.RequestId</p>
+    }
+
+    <a asp-controller="Catalog" asp-action="Index" style="display: inline-block; margin-top: 20px; padding: 10px 20px; background: #38bdf8; color: #0f172a; font-weight: 700; border-radius: 8px; text-decoration: none;">
+        Вернуться на главную &rarr;
+    </a>
+</div>

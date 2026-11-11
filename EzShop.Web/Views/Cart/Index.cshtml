@@ -1,0 +1,45 @@
+@{
+    ViewData["Title"] = "Корзина";
+}
+
+<main class="container cart-page-container">
+    <div class="page-head" data-reveal>
+        <a asp-controller="Catalog" asp-action="Index" class="back-link">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7M19 12H5"/></svg> Вернуться в каталог
+        </a>
+        <h1>Ваша корзина</h1>
+    </div>
+
+    <div class="cart-layout">
+        <div id="items" class="cart-items">
+            <!-- Заполняется динамически через cart.js -->
+        </div>
+
+        <aside class="cart-summary">
+            <div class="total" id="total"></div>
+            <button id="checkout" type="button" class="btn btn-primary" onclick="if (typeof openCheckoutForm === 'function') { openCheckoutForm(); } else { this.style.display='none'; var o = document.getElementById('order'); if(o){o.style.display='flex';o.scrollIntoView({behavior:'smooth'});} }">Оформить заказ</button>
+
+            <div id="order" class="order-form" style="display:none;">
+                @Html.AntiForgeryToken()
+                <h3>Данные получателя</h3>
+                <label class="cart-field">
+                    <span>Имя и фамилия</span>
+                    <input id="name" class="cart-input" value="@(User.Identity?.Name ?? "")" placeholder="Например, Айбек Асанов" autocomplete="name">
+                </label>
+                <label class="cart-field">
+                    <span>Номер телефона</span>
+                    <input id="phone" class="cart-input" placeholder="+996 ..." inputmode="tel" autocomplete="tel">
+                </label>
+                <div class="cart-note">
+                    <span class="cart-note-icon">ℹ️</span>
+                    <span>Просьба указывать корректный номер телефона. Менеджер свяжется с вами для подтверждения заказа.</span>
+                </div>
+                <label class="cart-field">
+                    <span>Адрес доставки</span>
+                    <input id="address" class="cart-input" placeholder="Город, улица, дом / квартира" autocomplete="street-address">
+                </label>
+                <button id="send" type="button" class="btn btn-primary">Подтвердить заказ</button>
+            </div>
+        </aside>
+    </div>
+</main>

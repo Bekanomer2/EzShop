@@ -1,0 +1,438 @@
+/* =========================================================
+   3D-разбор смартфона при прокрутке (product.html)
+   ========================================================= */
+.phone-story {
+    --story-top: calc(var(--header-h) + 12px);
+    position: relative;
+    height: 540vh;
+    margin: 72px 0 40px;
+}
+
+.story-sticky {
+    position: sticky;
+    top: var(--story-top);
+    height: calc(100vh - var(--story-top) - 12px);
+    height: calc(100dvh - var(--story-top) - 12px);
+    min-height: 460px;
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    border-radius: var(--r-xl);
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.story-sticky::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+        radial-gradient(55% 60% at 80% 40%, var(--aurora-2), transparent 70%),
+        radial-gradient(45% 50% at 10% 90%, var(--aurora-1), transparent 70%);
+}
+
+/* ---------- Текст глав ---------- */
+.story-text {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 28px;
+    padding: clamp(24px, 4vw, 64px);
+    min-width: 0;
+}
+
+.story-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--grad-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.story-steps {
+    display: grid;
+}
+
+.story-step {
+    grid-area: 1 / 1;
+    align-self: center;
+    opacity: 0;
+    transform: translateY(26px);
+    filter: blur(6px);
+    pointer-events: none;
+    transition: opacity .55s var(--ease-out), transform .55s var(--ease-out), filter .55s var(--ease-out);
+}
+
+.story-step.is-active {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    pointer-events: auto;
+}
+
+.step-tag {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.story-step h2 {
+    font-size: clamp(28px, 3.6vw, 54px);
+    font-weight: 800;
+    line-height: 1.06;
+    letter-spacing: -0.035em;
+    margin-bottom: 16px;
+}
+
+.story-step h2 em {
+    font-style: normal;
+    background: var(--grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.story-step h3 {
+    font-size: clamp(26px, 3vw, 44px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 12px;
+}
+
+.story-step p {
+    max-width: 46ch;
+    color: var(--muted);
+    font-size: clamp(15px, 1.2vw, 17.5px);
+    line-height: 1.6;
+}
+
+.story-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 22px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.story-hint i {
+    width: 22px;
+    height: 34px;
+    border-radius: 12px;
+    border: 2px solid currentColor;
+    position: relative;
+}
+
+.story-hint i::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 6px;
+    width: 4px;
+    height: 7px;
+    margin-left: -2px;
+    border-radius: 3px;
+    background: currentColor;
+    animation: wheel 1.6s ease-in-out infinite;
+}
+
+@keyframes wheel {
+    0% { opacity: 1; transform: translateY(0); }
+    70%, 100% { opacity: 0; transform: translateY(12px); }
+}
+
+.story-big {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin: 4px 0 14px;
+    font-family: var(--font-display);
+    line-height: 1;
+}
+
+.story-big b {
+    font-size: clamp(54px, 7.4vw, 112px);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    background: var(--grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-variant-numeric: tabular-nums;
+}
+
+.story-big span {
+    font-size: clamp(18px, 2vw, 28px);
+    font-weight: 700;
+    color: var(--muted);
+}
+
+.story-metric {
+    margin-bottom: 18px;
+}
+
+.story-metric-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.story-metric-row b {
+    font-family: var(--font-display);
+    font-size: clamp(26px, 3vw, 40px);
+    letter-spacing: -0.03em;
+    color: var(--text-strong);
+}
+
+.story-metric-row span {
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.story-bar {
+    height: 8px;
+    border-radius: 8px;
+    background: var(--ov-3);
+    overflow: hidden;
+}
+
+.story-bar i {
+    display: block;
+    height: 100%;
+    border-radius: 8px;
+    width: calc(var(--fill, 0) * 100%);
+    background: var(--grad);
+    transition: width 1.2s var(--ease-out);
+}
+
+.story-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.story-dots {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.story-dot {
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    background: var(--ov-4);
+    opacity: .5;
+    transition: width .4s var(--ease-out), background .3s, opacity .3s;
+}
+
+.story-dot:hover {
+    opacity: 1;
+}
+
+.story-dot.is-active {
+    width: 34px;
+    background: var(--grad);
+    opacity: 1;
+}
+
+/* ---------- Холст ---------- */
+.story-canvas-wrap {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+}
+
+.story-canvas-wrap canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: pan-y;
+}
+
+.story-loading {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    gap: 10px;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 14px;
+    transition: opacity .5s;
+}
+
+.story-loading::before {
+    content: '';
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 3px solid var(--ov-3);
+    border-top-color: var(--accent);
+    animation: spin .8s linear infinite;
+}
+
+.phone-story.is-ready .story-loading {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.story-progress {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    bottom: 18px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--ov-3);
+    overflow: hidden;
+}
+
+.story-progress-fill {
+    display: block;
+    height: 100%;
+    background: var(--grad);
+    transform: scaleX(0);
+    transform-origin: left;
+}
+
+/* ---------- Без прокрутки-«сцены» (reduced-motion): обычный блок ---------- */
+.phone-story.is-static {
+    height: auto;
+}
+
+.phone-story.is-static .story-sticky {
+    position: relative;
+    top: 0;
+    height: auto;
+    grid-template-columns: 1fr;
+}
+
+.phone-story.is-static .story-canvas-wrap {
+    height: min(60vh, 460px);
+    order: -1;
+}
+
+.phone-story.is-static .story-steps {
+    gap: 28px;
+}
+
+.phone-story.is-static .story-step {
+    grid-area: auto;
+    opacity: 1;
+    transform: none;
+    filter: none;
+    pointer-events: auto;
+}
+
+.phone-story.is-static .story-dots,
+.phone-story.is-static .story-progress,
+.phone-story.is-static .story-hint {
+    display: none;
+}
+
+/* ---------- Мобильная версия: холст сверху, текст снизу ---------- */
+@media (max-width: 900px) {
+    .phone-story {
+        height: 480vh;
+        margin: 44px 0 28px;
+    }
+
+    .story-sticky {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 1fr) auto;
+        border-radius: 22px;
+        min-height: 420px;
+        /* оставляем место под нижнюю навигацию */
+        height: calc(100dvh - var(--story-top) - 96px - env(safe-area-inset-bottom));
+    }
+
+    .story-canvas-wrap {
+        order: -1;
+    }
+
+    .story-text {
+        gap: 14px;
+        padding: 16px 18px 20px;
+    }
+
+    .story-kicker {
+        display: none;
+    }
+
+    .story-steps {
+        min-height: 188px;
+    }
+
+    .story-step h2 {
+        font-size: 26px;
+        margin-bottom: 8px;
+    }
+
+    .story-step h3 {
+        font-size: 24px;
+        margin-bottom: 6px;
+    }
+
+    .story-big b {
+        font-size: 54px;
+    }
+
+    .story-step p {
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .story-hint {
+        margin-top: 12px;
+    }
+
+    .story-metric {
+        margin-bottom: 10px;
+    }
+
+    .story-progress {
+        bottom: 10px;
+        left: 16px;
+        right: 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .story-step,
+    .story-bar i {
+        transition: none;
+    }
+
+    .story-hint i::after {
+        animation: none;
+    }
+}

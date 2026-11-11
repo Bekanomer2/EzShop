@@ -1,0 +1,505 @@
+/* =========================================================
+   Панель сравнения, модальные окна (сравнение, избранное)
+   ========================================================= */
+
+/* ---------- Плавающая панель сравнения ---------- */
+.compare-bar {
+    position: fixed;
+    bottom: 24px;
+    left: 16px;
+    right: 16px;
+    margin: 0 auto;
+    width: fit-content;
+    max-width: calc(100vw - 32px);
+    padding: 10px 12px 10px 22px;
+    border-radius: 999px;
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: blur(18px) saturate(1.5);
+    backdrop-filter: blur(18px) saturate(1.5);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+    z-index: 150;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: barIn .5s var(--ease-spring) both;
+}
+
+@keyframes barIn {
+    from { opacity: 0; transform: translateY(24px) scale(.95); }
+}
+
+.compare-bar-content {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+#compareBarText {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-strong);
+}
+
+.compare-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-compare-open {
+    min-height: 42px;
+    padding: 0 20px;
+    border: none;
+    border-radius: 999px;
+    background: var(--grad);
+    color: var(--on-accent);
+    font-weight: 800;
+    font-size: 13.5px;
+    box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 35%, transparent);
+    transition: transform var(--dur-1) var(--ease-out), box-shadow var(--dur-2);
+}
+
+.btn-compare-open:hover {
+    transform: translateY(-2px);
+}
+
+.btn-compare-clear {
+    min-height: 42px;
+    padding: 0 14px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13.5px;
+    font-weight: 600;
+    border-radius: 999px;
+    transition: color var(--dur-1), background var(--dur-1);
+}
+
+.btn-compare-clear:hover {
+    color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+/* ---------- Модальные окна ---------- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(10px, 3vw, 28px);
+    background: rgba(2, 6, 23, .6);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    animation: overlayIn .3s ease both;
+}
+
+@keyframes overlayIn {
+    from { opacity: 0; }
+}
+
+.modal-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 960px;
+    max-height: 90vh;
+    max-height: 90dvh;
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    backdrop-filter: blur(24px) saturate(1.4);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    animation: modalIn .5s var(--ease-spring) both;
+}
+
+.modal-overlay .modal-content {
+    background: var(--surface);
+}
+
+@keyframes modalIn {
+    from { opacity: 0; transform: translateY(28px) scale(.95); }
+}
+
+.compare-modal-content {
+    max-width: min(1100px, 100%);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--glass);
+}
+
+.modal-header h3 {
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.modal-close {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--ov-2);
+    color: var(--text-strong);
+    font-size: 22px;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+    transition: transform var(--dur-2) var(--ease-spring), background var(--dur-1);
+}
+
+.modal-close:hover {
+    background: var(--ov-3);
+    transform: rotate(90deg);
+}
+
+/* ---------- Таблица сравнения ---------- */
+.compare-table-wrapper {
+    padding: 0 0 8px;
+    overflow: auto;
+}
+
+.compare-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 560px;
+}
+
+.compare-table th,
+.compare-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    vertical-align: middle;
+    font-size: 14.5px;
+    color: var(--text);
+}
+
+.compare-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--surface);
+    padding-top: 18px;
+    border-bottom: 1px solid var(--border-strong);
+}
+
+.compare-table tbody th,
+.compare-table .compare-corner {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--surface);
+    text-align: left;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    white-space: nowrap;
+    min-width: 130px;
+}
+
+.compare-table .compare-corner {
+    z-index: 4;
+}
+
+.compare-table tbody tr:hover td,
+.compare-table tbody tr:hover th {
+    background: var(--ov-1);
+}
+
+.compare-th-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    min-width: 150px;
+    padding-top: 6px;
+}
+
+.compare-th-card img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 18px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    transition: transform var(--dur-2) var(--ease-out);
+}
+
+.compare-th-card a:hover img {
+    transform: scale(1.06) rotate(-2deg);
+}
+
+.compare-th-card h4 {
+    font-size: 15px;
+    font-weight: 800;
+    max-width: 160px;
+}
+
+.btn-compare-remove {
+    position: absolute;
+    top: -2px;
+    right: 4px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--ov-2);
+    color: var(--muted);
+    font-size: 17px;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+    transition: all var(--dur-1);
+}
+
+.btn-compare-remove:hover {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+}
+
+.compare-price {
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: -0.02em;
+}
+
+/* Лучшее значение */
+.compare-table td.is-best {
+    background: color-mix(in srgb, var(--success) 11%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 40%, transparent);
+    color: var(--text-strong);
+}
+
+.best-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    color: var(--success);
+    background: color-mix(in srgb, var(--success) 16%, transparent);
+    vertical-align: middle;
+}
+
+.cmp-ok { color: var(--success); font-weight: 700; }
+.cmp-no { color: var(--danger); font-weight: 700; }
+
+.compare-table .btn-add-cart {
+    min-height: 40px;
+    padding: 0 18px;
+    flex: none;
+}
+
+.compare-legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 24px 8px;
+    font-size: 12.5px;
+    color: var(--muted);
+}
+
+.compare-legend i {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--success) 25%, transparent);
+    border: 1px solid color-mix(in srgb, var(--success) 60%, transparent);
+}
+
+/* ---------- Избранное в модалке ---------- */
+.favorites-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.fav-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px 12px 12px;
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    transition: border-color var(--dur-1), transform var(--dur-2) var(--ease-out);
+    animation: cardIn .5s var(--ease-out) both;
+}
+
+.fav-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    transform: translateX(3px);
+}
+
+.fav-thumb {
+    width: 68px;
+    height: 68px;
+    object-fit: cover;
+    border-radius: 12px;
+    background: var(--surface-3);
+}
+
+.fav-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.fav-info h4 {
+    font-size: 15.5px;
+    margin-bottom: 2px;
+}
+
+.fav-specs {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-bottom: 4px;
+}
+
+.fav-price {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-strong);
+}
+
+.fav-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.fav-actions .auth-btn {
+    width: auto;
+}
+
+.btn-fav-remove {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 8px;
+    border-radius: 8px;
+    transition: color var(--dur-1), background var(--dur-1);
+}
+
+.btn-fav-remove:hover {
+    color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+.empty-ico {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    background: var(--grad-soft);
+    color: var(--accent);
+}
+
+.empty-ico svg {
+    width: 32px;
+    height: 32px;
+}
+
+/* ---------- Мобильная версия ---------- */
+@media (max-width: 900px) {
+    .compare-bar {
+        bottom: calc(86px + env(safe-area-inset-bottom));
+        padding: 8px 10px 8px 16px;
+    }
+
+    .compare-bar-content {
+        gap: 8px;
+    }
+}
+
+@media (max-width: 640px) {
+    .modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .modal-content,
+    .compare-modal-content {
+        max-height: 92dvh;
+        border-radius: 26px 26px 0 0;
+        animation: sheetIn .5s var(--ease-out) both;
+    }
+
+    @keyframes sheetIn {
+        from { transform: translateY(100%); }
+    }
+
+    .modal-header {
+        padding: 14px 18px;
+    }
+
+    .compare-table th,
+    .compare-table td {
+        padding: 12px 12px;
+        font-size: 13.5px;
+    }
+
+    .compare-th-card {
+        min-width: 120px;
+    }
+
+    .compare-th-card img {
+        width: 78px;
+        height: 78px;
+    }
+
+    .compare-table tbody th,
+    .compare-table .compare-corner {
+        min-width: 92px;
+        font-size: 12px;
+    }
+
+    .fav-card {
+        flex-wrap: wrap;
+    }
+
+    .fav-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .best-badge {
+        display: block;
+        margin: 4px 0 0;
+        width: fit-content;
+        margin-inline: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .modal-overlay,
+    .modal-content,
+    .compare-bar,
+    .fav-card {
+        animation: none !important;
+    }
+}

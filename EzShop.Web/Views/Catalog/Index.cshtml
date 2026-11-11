@@ -1,0 +1,150 @@
+@model CatalogIndexViewModel
+@{
+    ViewData["Title"] = "Каталог смартфонов";
+}
+
+<script>
+    window.productsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Products, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+    window.brandsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Brands.Select(b => new { name = b }), new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+    if (typeof productsData !== 'undefined') { productsData = window.productsData; }
+    if (typeof brandsData !== 'undefined') { brandsData = window.brandsData; }
+</script>
+
+<!-- Hero -->
+<section class="hero" aria-label="Приветствие">
+    <div class="hero-card in-view" data-reveal>
+        <div class="hero-text">
+            <h1>Смартфоны, которые хочется <em>держать в руках</em></h1>
+            <p>Флагманы и бестселлеры с гарантией, быстрой доставкой по Кыргызстану и возвратом в течение 14 дней. Сравнивайте модели и выбирайте без переплат.</p>
+            <div class="hero-cta">
+                <a href="#catalog" class="btn btn-primary">Смотреть каталог</a>
+                <button type="button" class="btn btn-ghost" onclick="openCompareModal()">Сравнить модели</button>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat"><strong id="heroModels">@Model.Products.Count</strong><span>моделей в каталоге</span></div>
+                <div class="hero-stat"><strong id="heroBrands">@Model.Brands.Count</strong><span>популярных брендов</span></div>
+                <div class="hero-stat"><strong>1 год</strong><span>гарантии на технику</span></div>
+            </div>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+            <div class="hero-phone"><img src="~/img/iPhone 15 pro max.jpg" alt="" loading="eager"></div>
+            <div class="hero-phone"><img src="~/img/samsung galaxy s24 ultra.jpg" alt="" loading="eager"></div>
+            <div class="hero-phone"><img src="~/img/pixel 8 pro.jpeg" alt="" loading="eager"></div>
+        </div>
+    </div>
+</section>
+
+<div class="main-container">
+    <aside class="sidebar" id="filtersPanel" aria-label="Фильтры каталога">
+        <div class="sidebar-head">
+            <h2>Фильтры <span class="filter-count" id="filterCount">0</span></h2>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <button type="button" class="btn-reset-filters" onclick="resetAllFilters()">Сбросить</button>
+                <button type="button" class="sidebar-close" onclick="closeFilters()" aria-label="Закрыть фильтры">&times;</button>
+            </div>
+        </div>
+
+        <details class="filter-group" open>
+            <summary>Цена, сом</summary>
+            <div class="filter-body">
+                <div class="price-inputs">
+                    <input type="number" id="minPrice" placeholder="От" inputmode="numeric" min="0" aria-label="Цена от" oninput="applyFilters()">
+                    <input type="number" id="maxPrice" placeholder="До" inputmode="numeric" min="0" aria-label="Цена до" oninput="applyFilters()">
+                </div>
+                <div class="price-presets">
+                    <button type="button" class="chip" data-min="" data-max="30000" onclick="setPricePreset(this)">до 30 000</button>
+                    <button type="button" class="chip" data-min="30000" data-max="60000" onclick="setPricePreset(this)">30–60 тыс.</button>
+                    <button type="button" class="chip" data-min="60000" data-max="" onclick="setPricePreset(this)">от 60 000</button>
+                </div>
+            </div>
+        </details>
+
+        <details class="filter-group" open>
+            <summary>Бренд</summary>
+            <div class="filter-body"><div class="chip-list" id="brandFilters"></div></div>
+        </details>
+
+        <details class="filter-group" open>
+            <summary>Оперативная память</summary>
+            <div class="filter-body"><div class="chip-list" id="ramFilters"></div></div>
+        </details>
+
+        <details class="filter-group">
+            <summary>Встроенная память</summary>
+            <div class="filter-body"><div class="chip-list" id="storageFilters"></div></div>
+        </details>
+
+        <div class="filter-toggles">
+            <label class="switch-label">
+                <span>Только в наличии</span>
+                <input type="checkbox" id="onlyInStockCheck" onchange="applyFilters()">
+                <span class="switch"></span>
+            </label>
+            <label class="switch-label">
+                <span>Только избранные</span>
+                <input type="checkbox" id="onlyFavoritesCheck" onchange="applyFilters()">
+                <span class="switch"></span>
+            </label>
+        </div>
+
+        <button type="button" class="btn btn-primary filters-apply" onclick="closeFilters()">
+            Показать <span id="filtersApplyCount" style="margin-left:4px;">@Model.Products.Count</span>&nbsp;моделей
+        </button>
+    </aside>
+
+    <div class="filters-backdrop" id="filtersBackdrop" onclick="closeFilters()"></div>
+
+    <main class="content" id="catalog">
+        <div class="top-bar">
+            <div class="search-wrap">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="search" placeholder="Поиск смартфона по названию или бренду" autocomplete="off" aria-label="Поиск" oninput="applyFilters()">
+            </div>
+            <button type="button" class="btn-filters-open" onclick="openFilters()">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+                Фильтры <span class="filter-count" id="filterCountBtn">0</span>
+            </button>
+            <div class="sort-box">
+                <select id="sort" aria-label="Сортировка" onchange="applyFilters()">
+                    <option value="default">По умолчанию</option>
+                    <option value="price_asc">Сначала дешевле</option>
+                    <option value="price_desc">Сначала дороже</option>
+                    <option value="az">По названию (А-Я)</option>
+                    <option value="za">По названию (Я-А)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="catalog-summary">
+            <span>Найдено моделей: <strong id="productsCount">@Model.Products.Count</strong></span>
+            <span class="active-filters" id="activeFilters"></span>
+        </div>
+
+        <section class="products" id="products" aria-live="polite">
+            @for (int i = 0; i < 8; i++)
+            {
+                <div class="card-skeleton">
+                    <div class="skeleton sk-img"></div>
+                    <div class="skeleton sk-line w60"></div>
+                    <div class="skeleton sk-line w40"></div>
+                    <div class="skeleton sk-line" style="height: 38px; border-radius: 12px; margin-top: auto;"></div>
+                </div>
+            }
+        </section>
+    </main>
+</div>
+
+@section Scripts {
+    <script>
+        // Инициализация данных каталога из C# модели (БД / репозиторий)
+        window.productsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Products, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+        window.brandsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Brands.Select(b => new { name = b }), new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+        if (typeof productsData !== 'undefined') {
+            productsData = window.productsData;
+        }
+        if (typeof brandsData !== 'undefined') {
+            brandsData = window.brandsData;
+        }
+    </script>
+    <script src="~/js/catalog.js"></script>
+}

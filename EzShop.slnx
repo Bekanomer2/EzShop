@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="EzShop.Domain/EzShop.Domain.csproj" />
+  <Project Path="EzShop.DAL/EzShop.DAL.csproj" />
+  <Project Path="EzShop.BLL/EzShop.BLL.csproj" />
+  <Project Path="EzShop.Web/EzShop.Web.csproj" />
+</Solution>

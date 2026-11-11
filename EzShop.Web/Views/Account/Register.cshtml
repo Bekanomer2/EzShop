@@ -1,0 +1,104 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Регистрация — EzShop";
+}
+
+<main class="auth-page">
+    <section class="auth-showcase" aria-hidden="true">
+        <div class="auth-orb orb-a"></div>
+        <div class="auth-orb orb-b"></div>
+        <div class="auth-showcase-inner">
+            <h2>Лучшие смартфоны — <em>в одном месте</em></h2>
+            <p>Создайте аккаунт, чтобы сохранять историю заказов и первыми узнавать о скидках.</p>
+            <ul class="auth-perks">
+                <li><span class="perk-ico" data-icon="shield-check"></span>Гарантия 1 год на всю технику</li>
+                <li><span class="perk-ico" data-icon="truck"></span>Быстрая доставка по Кыргызстану</li>
+                <li><span class="perk-ico" data-icon="refresh"></span>14 дней на обмен и возврат</li>
+            </ul>
+        </div>
+        <div class="auth-phones">
+            <div class="auth-phone"><img src="~/img/iPhone 15 pro max.jpg" alt=""></div>
+            <div class="auth-phone"><img src="~/img/samsung galaxy s24 ultra.jpg" alt=""></div>
+            <div class="auth-phone"><img src="~/img/xiaomi 14 ultra.jpg" alt=""></div>
+        </div>
+    </section>
+
+    <section class="auth-panel">
+        <div class="auth-container">
+            <div class="auth-brand">
+                <img src="~/img/logo.png" alt="EzShop" class="auth-logo">
+            </div>
+            <h1 class="auth-title">Создать аккаунт</h1>
+            <p class="auth-sub">Присоединяйтесь к покупателям EzShop</p>
+
+            <div class="auth-tabs" role="tablist">
+                <a asp-action="Login" class="auth-tab" role="tab" aria-selected="false">Вход</a>
+                <a asp-action="Register" class="auth-tab active" role="tab" aria-selected="true">Регистрация</a>
+            </div>
+
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 20px; font-size: 13px;">
+                    <div asp-validation-summary="All"></div>
+                </div>
+            }
+
+            <form asp-action="Register" method="post" class="auth-form active">
+                @Html.AntiForgeryToken()
+
+                <div class="field">
+                    <input asp-for="Username" id="regName" class="auth-input" placeholder=" " autocomplete="username" required minlength="2" />
+                    <label for="regName">Логин</label>
+                </div>
+
+                <div class="field">
+                    <input asp-for="Email" type="email" id="regEmail" class="auth-input" placeholder=" " autocomplete="email" required />
+                    <label for="regEmail">Email</label>
+                </div>
+
+                <div class="field">
+                    <input asp-for="FullName" id="regFull" class="auth-input" placeholder=" " />
+                    <label for="regFull">ФИО (по желанию)</label>
+                </div>
+
+                <div class="field password-wrapper">
+                    <input asp-for="Password" id="regPass" type="password" class="auth-input" placeholder=" " autocomplete="new-password" required minlength="6" />
+                    <label for="regPass">Пароль (от 6 символов)</label>
+                    <button type="button" class="toggle-password" onclick="togglePassword('regPass')" aria-label="Показать пароль"></button>
+                </div>
+
+                <button type="submit" class="auth-btn auth-submit">
+                    <span class="btn-label">Зарегистрироваться</span>
+                </button>
+
+                <p class="auth-switch">
+                    Уже есть аккаунт? <a asp-action="Login">Войти</a>
+                </p>
+            </form>
+        </div>
+    </section>
+</main>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('[data-icon]').forEach(el => {
+                if (typeof window.EZ_ICON === 'function') el.innerHTML = window.EZ_ICON(el.dataset.icon);
+            });
+            document.querySelectorAll('.toggle-password').forEach(b => {
+                if (typeof window.EZ_ICON === 'function') b.innerHTML = window.EZ_ICON('eye');
+            });
+        });
+
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const isPass = input.type === 'password';
+            input.type = isPass ? 'text' : 'password';
+            const btn = input.parentElement.querySelector('.toggle-password');
+            if (btn && typeof window.EZ_ICON === 'function') {
+                btn.innerHTML = window.EZ_ICON(isPass ? 'eye-off' : 'eye');
+            }
+        }
+    </script>
+}

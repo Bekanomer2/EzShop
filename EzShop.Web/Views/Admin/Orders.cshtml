@@ -1,0 +1,356 @@
+@model EzShop.Web.ViewModels.AdminOrdersViewModel
+@{
+    Layout = null;
+    var showAdminAuthLoader = TempData["JustLoggedIn"] != null;
+    string GetStatusClass(EzShop.Domain.Enums.OrderStatus status) => status switch
+    {
+        EzShop.Domain.Enums.OrderStatus.Pending => "status-pending",
+        EzShop.Domain.Enums.OrderStatus.InProgress => "status-processing",
+        EzShop.Domain.Enums.OrderStatus.Delivered => "status-delivered",
+        EzShop.Domain.Enums.OrderStatus.Returned => "status-return",
+        EzShop.Domain.Enums.OrderStatus.Cancelled => "status-cancelled",
+        _ => "status-pending"
+    };
+
+    string GetStatusIcon(EzShop.Domain.Enums.OrderStatus status) => status switch
+    {
+        EzShop.Domain.Enums.OrderStatus.Pending => "⏳",
+        EzShop.Domain.Enums.OrderStatus.InProgress => "🔨",
+        EzShop.Domain.Enums.OrderStatus.Delivered => "✅",
+        EzShop.Domain.Enums.OrderStatus.Returned => "🔄",
+        EzShop.Domain.Enums.OrderStatus.Cancelled => "❌",
+        _ => "⏳"
+    };
+}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#070b1a">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap">
+    <script src="/js/theme.js"></script>
+    <title>Все заказы — EzShop Admin</title>
+    <link rel="stylesheet" href="/style.css?v=20261111_02">
+    <style>
+        :root[data-theme="light"] .logo img,
+        :root[data-theme="light"] .loader-logo,
+        :root[data-theme="light"] .auth-logo {
+            filter: invert(1) hue-rotate(180deg) saturate(1.3) !important;
+        }
+        @@keyframes loaderPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .loader-logo {
+            animation: loaderIn .5s .12s both, loaderPulse 2.4s 0.6s infinite ease-in-out !important;
+        }
+    </style>
+</head>
+
+<body class="admin-body @(showAdminAuthLoader ? "auth-loading" : "")">
+    @if (showAdminAuthLoader)
+    {
+        <div class="loader-overlay" id="pageLoader">
+            <img src="/img/logo.png" alt="Вход в панель управления" class="loader-logo">
+            <div class="loader-bar"><span></span></div>
+        </div>
+    }
+
+    <header class="site-header admin-header">
+        <div class="header-inner">
+            <a href="/" class="logo" aria-label="EzShop — в магазин">
+                <img src="/img/logo.png" alt="EzShop">
+            </a>
+            <div class="admin-header-title">
+                <span class="admin-badge">Admin</span>
+                <h2>Управление заказами</h2>
+            </div>
+            <nav id="nav" class="main-nav" aria-label="Меню администратора">
+                <a href="/Admin" data-icon="phone">Каталог, бренды и отзывы</a>
+                <a href="/Admin/Orders" class="active" data-icon="package">Все заказы</a>
+                <a href="/" data-icon="store">В магазин</a>
+                <div class="user-panel">
+                    <span id="usernameDisplay">@(User.Identity?.Name ?? "admin") 👑 (Admin)</span>
+                    <form asp-controller="Account" asp-action="Logout" method="post" style="display:inline; margin:0;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="admin-logout-btn">Выход</button>
+                    </form>
+                </div>
+            </nav>
+            <div class="burger" id="burger"><span></span><span></span><span></span></div>
+        </div>
+    </header>
+
+    <div class="admin-container">
+        <!-- Сводная статистика заказов -->
+        <div class="admin-stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" data-icon="package"></div>
+                <div class="stat-info">
+                    <span class="stat-label">Всего заказов</span>
+                    <h3 id="statOrdersCount">@Model.TotalCount</h3>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon ok" data-icon="wallet"></div>
+                <div class="stat-info">
+                    <span class="stat-label">Выручка (сумма заказов)</span>
+                    <h3 id="statOrdersRevenue">@Model.Revenue.ToString("N0") сом</h3>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" data-icon="wrench"></div>
+                <div class="stat-info">
+                    <span class="stat-label">В работе (активные)</span>
+                    <h3 id="statOrdersProcessing">@Model.InProgressCount</h3>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bad" data-icon="refresh"></div>
+                <div class="stat-info">
+                    <span class="stat-label">Оформлено возвратов</span>
+                    <h3 id="statOrdersReturns">@Model.ReturnsCount</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Панель фильтров, поиска по телефону и сортировки -->
+        <div class="admin-table-panel" style="margin-bottom: 24px;">
+            <div class="orders-filter-bar">
+                <div class="orders-search-box">
+                    <label for="orderPhoneSearch">Поиск по номеру телефона:</label>
+                    <input type="text" id="orderPhoneSearch" class="admin-input" placeholder="Введите номер: +996... или 077..." oninput="filterAdminOrders()">
+                </div>
+
+                <div class="orders-filter-box">
+                    <label for="orderStatusFilter">Фильтр по статусу:</label>
+                    <select id="orderStatusFilter" class="admin-input" onchange="filterAdminOrders()">
+                        <option value="all">Все статусы</option>
+                        <option value="В обработке">В обработке</option>
+                        <option value="В работе">В работе</option>
+                        <option value="Доставлен">Доставлен</option>
+                        <option value="Возврат">Возврат</option>
+                        <option value="Отменен">Отменен</option>
+                    </select>
+                </div>
+
+                <div class="orders-filter-box">
+                    <label for="orderSortFilter">Сортировка по дате / сумме:</label>
+                    <select id="orderSortFilter" class="admin-input" onchange="filterAdminOrders()">
+                        <option value="date_desc">Сначала новые (свежие)</option>
+                        <option value="date_asc">Сначала старые</option>
+                        <option value="total_desc">По сумме: сначала крупные</option>
+                        <option value="total_asc">По сумме: сначала мелкие</option>
+                    </select>
+                </div>
+
+                <button type="button" class="btn-refresh-orders" onclick="window.location.reload()" title="Обновить список заказов">
+                    <span data-icon="refresh"></span>Обновить
+                </button>
+            </div>
+        </div>
+
+        <!-- Список всех заказов (Рендерится напрямую из C# ASP.NET Core) -->
+        <div class="admin-table-panel">
+            <div class="panel-header">
+                <h3><span data-icon="list"></span>Все поступившие заказы</h3>
+                <span style="font-size: 13px; color: var(--muted);">Найдено: <b id="filteredOrdersCount">@Model.Orders.Count</b></span>
+            </div>
+
+            <div class="orders-list" id="adminOrdersList">
+                @if (Model.Orders.Count == 0)
+                {
+                    <div style="text-align: center; color: var(--muted); padding: 50px 20px;">
+                        <div style="font-size: 40px; margin-bottom: 12px;">🔍</div>
+                        <h3>Заказы не найдены</h3>
+                        <p style="font-size: 13px; margin-top: 6px;">Попробуйте изменить номер телефона или статус в фильтре</p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var o in Model.Orders)
+                    {
+                        var statusClass = GetStatusClass(o.Status);
+                        var statusIcon = GetStatusIcon(o.Status);
+                        var cleanPhone = new string(o.CustomerPhone.Where(char.IsDigit).ToArray());
+
+                        <div class="order-card" data-order-id="@o.Id" data-phone="@cleanPhone" data-raw-phone="@o.CustomerPhone" data-status="@o.StatusText" data-total="@o.Total" data-date="@o.CreatedAt.Ticks">
+                            <div class="order-header">
+                                <div>
+                                    <span class="order-id">Заказ #@o.Id <small style="font-size:12px; color:var(--muted); font-weight:normal;">(ID базы: @o.Id)</small></span>
+                                    <span class="order-date">@o.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
+                                </div>
+                                <div class="order-status-badge @statusClass" id="statusBadge_@o.Id">
+                                    @statusIcon @o.StatusText
+                                </div>
+                            </div>
+
+                            <div class="admin-order-details-grid">
+                                <!-- Данные клиента -->
+                                <div class="admin-order-client-box">
+                                    <span class="client-label">Клиент и доставка</span>
+                                    <div class="info-line"><span data-icon="user"></span><span><b>Получатель:</b> @(string.IsNullOrWhiteSpace(o.CustomerName) ? "Не указано" : o.CustomerName)</span></div>
+                                    <div class="info-line"><span data-icon="phone"></span><span><b>Телефон:</b>
+                                        <a href="tel:@o.CustomerPhone" style="color:var(--accent); font-weight:700; text-decoration:underline;">@(string.IsNullOrWhiteSpace(o.CustomerPhone) ? "Не указан" : o.CustomerPhone)</a></span></div>
+                                    <div class="info-line"><span data-icon="map-pin"></span><span><b>Адрес:</b> @(string.IsNullOrWhiteSpace(o.CustomerAddress) ? "Самовывоз / Не указан" : o.CustomerAddress)</span></div>
+                                </div>
+
+                                <!-- Управление статусом прямо из карточки (C# Action) -->
+                                <div class="admin-order-status-change-box">
+                                    <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); font-weight:700; margin-bottom:6px;">Сменить статус заказа:</div>
+                                    <select class="admin-status-select" onchange="changeOrderStatusFromAdmin(@o.Id, this.value)">
+                                        <option value="В обработке" selected="@(o.StatusText == "В обработке")">В обработке</option>
+                                        <option value="В работе" selected="@(o.StatusText == "В работе")">В работе</option>
+                                        <option value="Доставлен" selected="@(o.StatusText == "Доставлен")">Доставлен</option>
+                                        <option value="Возврат" selected="@(o.StatusText == "Возврат")">Возврат</option>
+                                        <option value="Отменен" selected="@(o.StatusText == "Отменен")">Отменен</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Список товаров -->
+                            <div class="order-items" style="margin-top:14px;">
+                                @foreach (var item in o.Items)
+                                {
+                                    <div class="order-item">
+                                        <span>📱 @item.Name × <b>@item.Qty шт.</b></span>
+                                        <b>@((item.Price * item.Qty).ToString("N0")) сом</b>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Итог -->
+                            <div class="order-total-footer">
+                                <span>Итоговая сумма заказа:</span>
+                                <span class="order-total-sum">@o.Total.ToString("N0") сом</span>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Модульные скрипты -->
+    <script src="/js/icons.js?v=20261111_09"></script>
+    <script src="/js/ui.js?v=20261111_09"></script>
+    <script>
+        // Инициализация SVG-иконок для всех элементов с data-icon
+        function renderAllIcons() {
+            document.querySelectorAll('[data-icon]').forEach(el => {
+                if (el.querySelector(':scope > svg')) return;
+                const inNav = !!el.closest('nav');
+                const name = el.dataset.icon;
+                if (!name || typeof window.EZ_ICON !== 'function') return;
+                if (el.tagName === 'A') {
+                    el.insertAdjacentHTML('afterbegin', window.EZ_ICON(name, inNav ? 'nav-ico' : ''));
+                } else {
+                    el.innerHTML = window.EZ_ICON(name);
+                }
+            });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', renderAllIcons);
+        } else {
+            renderAllIcons();
+        }
+        const pageLoader = document.getElementById('pageLoader');
+        if (pageLoader) {
+            setTimeout(() => {
+                pageLoader.classList.add('hidden');
+                document.body.classList.remove('auth-loading');
+            }, 700);
+        }
+        // Фильтрация и мгновенный поиск по номеру телефона
+        function filterAdminOrders() {
+            const search = (document.getElementById('orderPhoneSearch')?.value || '').replace(/\D/g, '').toLowerCase();
+            const status = document.getElementById('orderStatusFilter')?.value || 'all';
+            const sort = document.getElementById('orderSortFilter')?.value || 'date_desc';
+
+            const container = document.getElementById('adminOrdersList');
+            const cards = Array.from(container.querySelectorAll('.order-card'));
+
+            let visibleCount = 0;
+            cards.forEach(card => {
+                const phone = (card.dataset.phone || '').toLowerCase();
+                const rawPhone = (card.dataset.rawPhone || '').toLowerCase();
+                const cardStatus = card.dataset.status || 'В обработке';
+
+                const matchesPhone = !search || phone.includes(search) || rawPhone.includes(search);
+                const matchesStatus = status === 'all' || cardStatus === status;
+
+                if (matchesPhone && matchesStatus) {
+                    card.style.display = '';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Сортировка
+            cards.sort((a, b) => {
+                if (sort === 'date_desc') return Number(b.dataset.date) - Number(a.dataset.date);
+                if (sort === 'date_asc') return Number(a.dataset.date) - Number(b.dataset.date);
+                if (sort === 'total_desc') return Number(b.dataset.total) - Number(a.dataset.total);
+                if (sort === 'total_asc') return Number(a.dataset.total) - Number(b.dataset.total);
+                return 0;
+            });
+            cards.forEach(card => container.appendChild(card));
+
+            const countEl = document.getElementById('filteredOrdersCount');
+            if (countEl) countEl.textContent = visibleCount;
+        }
+
+        // Изменение статуса через C# Action
+        async function changeOrderStatusFromAdmin(orderId, newStatus) {
+            try {
+                const resp = await fetch(`/Admin/UpdateOrderStatus/${orderId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const statusText = data.newStatus || newStatus;
+                    const card = document.querySelector(`.order-card[data-order-id="${orderId}"]`);
+                    if (card) {
+                        card.dataset.status = statusText;
+                    }
+                    const badge = document.getElementById(`statusBadge_${orderId}`);
+                    if (badge) {
+                        const icons = { 'В обработке': '⏳', 'В работе': '🔨', 'Доставлен': '✅', 'Возврат': '🔄', 'Отменен': '❌' };
+                        const classes = { 'В обработке': 'status-pending', 'В работе': 'status-processing', 'Доставлен': 'status-delivered', 'Возврат': 'status-return', 'Отменен': 'status-cancelled' };
+                        badge.className = `order-status-badge ${classes[statusText] || 'status-pending'}`;
+                        badge.textContent = `${icons[statusText] || '⏳'} ${statusText}`;
+                    }
+                    showToast(`Статус заказа #${orderId} изменен на "${statusText}"`, 'success');
+                } else {
+                    showToast('Не удалось обновить статус заказа', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Ошибка связи с сервером', 'error');
+            }
+        }
+
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = msg;
+            toast.style.cssText = 'background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 12px 20px; border-radius: 10px; margin-top: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); font-size: 14px;';
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3500);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,204 @@
+@{
+    var isAdminUser = User.IsInRole("Admin") || string.Equals(User.Identity?.Name, "admin", StringComparison.OrdinalIgnoreCase);
+    var showAuthLogoLoader = !isAdminUser && TempData["JustLoggedIn"] != null;
+}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#070b1a">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap">
+    <script src="~/js/theme.js"></script>
+    <title>@ViewData["Title"] — EzShop</title>
+    <link rel="stylesheet" href="~/style.css" asp-append-version="true">
+    <style>
+        @@keyframes loaderPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        @@keyframes loaderPulseLight {
+            0%, 100% { transform: scale(1); filter: invert(1) hue-rotate(180deg) saturate(1.3); }
+            50% { transform: scale(1.05); filter: invert(1) hue-rotate(180deg) saturate(1.3); }
+        }
+        :root[data-theme="light"] .logo img,
+        :root[data-theme="light"] .auth-logo {
+            filter: invert(1) hue-rotate(180deg) saturate(1.3) !important;
+        }
+        :root[data-theme="light"] .loader-logo,
+        html[data-theme="light"] .loader-logo,
+        [data-theme="light"] .loader-logo {
+            filter: invert(1) hue-rotate(180deg) saturate(1.3) !important;
+            animation: loaderIn .5s .12s both, loaderPulseLight 2.4s 0.6s infinite ease-in-out !important;
+            will-change: transform, filter;
+        }
+    </style>
+</head>
+<body class="@(showAuthLogoLoader ? "auth-loading" : "")">
+    @if (showAuthLogoLoader)
+    {
+        <!-- Анимация с логотипом: показывается ТОЛЬКО после авторизации при переходе в магазин -->
+        <div class="loader-overlay" id="pageLoader">
+            <img src="~/img/logo.png" alt="Вход в EzShop" class="loader-logo">
+            <div class="loader-bar"><span></span></div>
+        </div>
+    }
+
+    <header class="site-header">
+        <div class="header-inner">
+            <a asp-controller="Catalog" asp-action="Index" class="logo" aria-label="EzShop — на главную">
+                <img src="~/img/logo.png" alt="EzShop">
+            </a>
+            <nav id="nav" class="main-nav" aria-label="Главное меню">
+                <a asp-controller="Catalog" asp-action="Index" data-icon="grid">Каталог</a>
+                <a href="javascript:void(0)" onclick="openFavoritesModal()" data-icon="heart">Избранное <span class="nav-count nav-fav-count">0</span></a>
+                <a href="javascript:void(0)" onclick="openCompareModal()" data-icon="scale">Сравнение <span class="nav-count" id="navCompareCount">0</span></a>
+                <a asp-controller="Orders" asp-action="Index" class="nav-orders-link" data-icon="package">Заказы</a>
+                <a asp-controller="Cart" asp-action="Index" data-icon="cart">Корзина <span class="nav-count nav-cart-count" id="navCartCount">0</span></a>
+                @if (User.IsInRole("Admin") || string.Equals(User.Identity?.Name, "admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    <a asp-controller="Admin" asp-action="Index" class="admin-only-nav visible" data-icon="shield">Админка</a>
+                }
+                <a href="#footer-about" data-icon="info">О нас</a>
+                <a href="#footer-contacts" data-icon="phone">Контакты</a>
+                <div class="user-panel">
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <span id="usernameDisplay">@User.Identity.Name</span>
+                        <form asp-controller="Account" asp-action="Logout" method="post" style="display:inline; margin:0;">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn-logout" style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; font-weight:600; padding:4px 8px;">Выйти</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <a asp-controller="Account" asp-action="Login" style="color:var(--primary); font-size:13px; font-weight:600; text-decoration:none;">Вход</a>
+                        <a asp-controller="Account" asp-action="Register" class="btn btn-primary" style="padding:6px 14px; font-size:13px; border-radius:var(--radius-sm); text-decoration:none;">Регистрация</a>
+                    }
+                </div>
+            </nav>
+            <div class="burger" id="burger"><span></span><span></span><span></span></div>
+        </div>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null || TempData["Success"] != null)
+    {
+        var msg = TempData["SuccessMessage"] ?? TempData["Success"];
+        <div style="max-width: 1400px; margin: 16px auto; padding: 0 20px;">
+            <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; padding: 12px 18px; border-radius: var(--radius-md); font-weight: 500; font-size: 14px;">
+                ✅ @msg
+            </div>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null || TempData["Error"] != null)
+    {
+        var msg = TempData["ErrorMessage"] ?? TempData["Error"];
+        <div style="max-width: 1400px; margin: 16px auto; padding: 0 20px;">
+            <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 12px 18px; border-radius: var(--radius-md); font-weight: 500; font-size: 14px;">
+                ⚠️ @msg
+            </div>
+        </div>
+    }
+
+    <main role="main">
+        @RenderBody()
+    </main>
+
+    <footer id="footer">
+        <div class="footer-container">
+            <div class="footer-section" id="footer-about" data-reveal>
+                <h3>EzShop</h3>
+                <p>Мы — магазин электроники, специализирующийся на качественных смартфонах. Наша цель — предоставить клиентам лучшие цены и удобный сервис покупки с гарантией.</p>
+            </div>
+            <div class="footer-section" id="footer-contacts" data-reveal style="--i:1">
+                <h3>Контакты</h3>
+                <p>г. Бишкек, ул. Киевская 10</p>
+                <p>+996 (777) 12-34-56</p>
+                <p>support@ezshop.kg</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 EzShop. Все права защищены. 
+        </div>
+    </footer>
+
+    <!-- Плавающая кнопка заказов -->
+    <a asp-controller="Orders" asp-action="Index" class="orders-btn" id="ordersBtn">Заказы</a>
+
+    <!-- Плавающая кнопка корзины с бейджем количества -->
+    <a asp-controller="Cart" asp-action="Index" class="cart-btn" id="cartBtn" aria-label="Корзина">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+        <span class="btn-text">Корзина</span> <span id="cartCount">0</span>
+    </a>
+
+    <!-- Плавающая панель сравнения -->
+    <div class="compare-bar" id="compareBar" style="display: none;">
+        <div class="compare-bar-content">
+            <span id="compareBarText">Выбрано 0 товаров для сравнения</span>
+            <div class="compare-bar-actions">
+                <button class="btn-compare-open" onclick="openCompareModal()">Сравнить</button>
+                <button class="btn-compare-clear" onclick="clearCompare()">Очистить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно сравнения -->
+    <div class="modal-overlay" id="compareModal" style="display: none;" role="dialog" aria-modal="true" aria-label="Сравнение смартфонов">
+        <div class="modal-content compare-modal-content">
+            <div class="modal-header">
+                <h3>Сравнение смартфонов</h3>
+                <button class="modal-close" onclick="closeCompareModal()" aria-label="Закрыть">&times;</button>
+            </div>
+            <div class="compare-table-wrapper" id="compareTableContainer"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно избранного -->
+    <div class="modal-overlay" id="favoritesModal" style="display: none;" role="dialog" aria-modal="true" aria-label="Избранное">
+        <div class="modal-content" style="max-width: 650px;">
+            <div class="modal-header">
+                <h3>Избранные смартфоны</h3>
+                <button class="modal-close" onclick="closeFavoritesModal()" aria-label="Закрыть">&times;</button>
+            </div>
+            <div id="favoritesModalBody" style="padding: 24px; max-height: 70vh; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <!-- Авторизационный контекст клиента -->
+    <script>
+        window.isAuthenticated = @(User.Identity?.IsAuthenticated == true ? "true" : "false");
+        window.currentUserId = @(User.Identity?.IsAuthenticated == true ? (User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0") : "0");
+        window.currentUser = @(User.Identity?.IsAuthenticated == true 
+            ? Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { 
+                id = int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var parsedUid) ? parsedUid : 1, 
+                username = User.Identity?.Name ?? "user", 
+                email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? (string.Equals(User.Identity?.Name, "admin", StringComparison.OrdinalIgnoreCase) ? "admin@ezshop.kg" : "user@ezshop.kg"),
+                role = (User.IsInRole("Admin") || string.Equals(User.Identity?.Name, "admin", StringComparison.OrdinalIgnoreCase)) ? "admin" : "user"
+              })) 
+            : "null");
+        var currentUser = window.currentUser;
+        if (window.currentUser) {
+            try { localStorage.setItem('ez_user', JSON.stringify(window.currentUser)); } catch(e){}
+        } else {
+            try { localStorage.removeItem('ez_user'); } catch(e){}
+        }
+    </script>
+
+    <!-- Скрипты клиентского интерфейса -->
+    <script src="~/js/icons.js" asp-append-version="true"></script>
+    <script src="~/js/auth.js" asp-append-version="true"></script>
+    <script src="~/js/products-data.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/ui.js" asp-append-version="true"></script>
+    <script src="~/js/product-card.js" asp-append-version="true"></script>
+    <script src="~/js/cart.js" asp-append-version="true"></script>
+    <script src="~/js/favorites.js" asp-append-version="true"></script>
+    <script src="~/js/compare.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

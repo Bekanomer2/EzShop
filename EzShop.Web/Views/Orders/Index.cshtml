@@ -1,0 +1,237 @@
+@model OrdersIndexViewModel
+@{
+    ViewData["Title"] = "Мои заказы";
+    var isAuth = User.Identity?.IsAuthenticated == true;
+}
+
+<div class="container orders-container">
+    <div class="orders-page-header" data-reveal>
+        <a asp-controller="Catalog" asp-action="Index" class="back-link">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7M19 12H5"/></svg> Вернуться в магазин
+        </a>
+        <h1>История заказов</h1>
+        <p class="orders-subtitle">Отслеживайте статусы ваших покупок в режиме реального времени</p>
+    </div>
+
+    <div id="ordersList" class="orders-list">
+        @if (!isAuth)
+        {
+            <div style="text-align: center; color: var(--muted); padding: 50px 20px; background: var(--glass); border-radius: var(--r-xl); border: 1px solid var(--glass-border);">
+                <div style="font-size: 42px; margin-bottom: 12px;">🔒</div>
+                <h3 style="color: var(--text-strong); font-size: 20px; margin-bottom: 8px; font-weight: 800;">Вход в личный кабинет</h3>
+                <p style="font-size: 14.5px; max-width: 440px; margin: 0 auto 20px; line-height: 1.5; color: var(--muted);">
+                    История заказов привязана к учетной записи. Войдите в свой аккаунт, чтобы просмотреть покупки и их статусы.
+                </p>
+                <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="/Orders" class="btn btn-primary" style="display: inline-block; padding: 10px 24px; font-weight: 700; text-decoration: none;">
+                    Войти в аккаунт
+                </a>
+            </div>
+        }
+        else if (!Model.Orders.Any())
+        {
+            <div style="text-align: center; color: var(--muted); padding: 50px 20px; background: var(--glass); border-radius: var(--r-xl); border: 1px solid var(--glass-border);">
+                <div style="font-size: 42px; margin-bottom: 12px;">📦</div>
+                <h3 style="color: var(--text-strong); font-size: 20px; margin-bottom: 8px; font-weight: 800;">История заказов пуста</h3>
+                <p style="color: var(--muted); margin-bottom: 18px;">Время сделать первую покупку и заказать смартфон!</p>
+                <a asp-controller="Catalog" asp-action="Index" class="btn btn-primary" style="display: inline-block; padding: 10px 24px; text-decoration: none;">
+                    Перейти в каталог
+                </a>
+            </div>
+        }
+        else
+        {
+            @foreach (var o in Model.Orders)
+            {
+                var statusText = o.StatusText;
+                var statusClass = "status-pending";
+                var statusIcon = "⏳";
+
+                if (o.Status == EzShop.Domain.Enums.OrderStatus.InProgress)
+                {
+                    statusClass = "status-processing";
+                    statusIcon = "🔨";
+                }
+                else if (o.Status == EzShop.Domain.Enums.OrderStatus.Delivered)
+                {
+                    statusClass = "status-delivered";
+                    statusIcon = "✅";
+                }
+                else if (o.Status == EzShop.Domain.Enums.OrderStatus.Returned)
+                {
+                    statusClass = "status-return";
+                    statusIcon = "🔄";
+                }
+                else if (o.Status == EzShop.Domain.Enums.OrderStatus.Cancelled)
+                {
+                    statusClass = "status-cancelled";
+                    statusIcon = "❌";
+                }
+
+                <div class="order-card" data-order-id="@o.Id" data-order-status="@o.StatusText">
+                    <div class="order-header">
+                        <div>
+                            <span class="order-id">Заказ #@o.Id</span>
+                            <span class="order-date">@o.CreatedAt.ToString("dd.MM.yyyy HH:mm")</span>
+                        </div>
+                        <div class="order-status-badge @statusClass" id="statusBadge_@o.Id">
+                            @statusIcon @statusText
+                        </div>
+                    </div>
+
+                    <!-- Визуальный трекер этапа заказа (Оформлен ➔ В обработке ➔ В работе ➔ Доставлен/Возврат/Отменен) -->
+                    <div class="order-tracker" id="tracker_@o.Id">
+                        <div class="tracker-step active">
+                            <span class="tracker-dot"></span>
+                            <span class="tracker-label">Оформлен</span>
+                        </div>
+                        <div class="tracker-line @(o.Status != EzShop.Domain.Enums.OrderStatus.Cancelled ? "active" : "")"></div>
+                        <div class="tracker-step @(o.Status != EzShop.Domain.Enums.OrderStatus.Cancelled ? "active" : "")">
+                            <span class="tracker-dot"></span>
+                            <span class="tracker-label">В обработке</span>
+                        </div>
+                        <div class="tracker-line @(o.Status == EzShop.Domain.Enums.OrderStatus.InProgress || o.Status == EzShop.Domain.Enums.OrderStatus.Delivered || o.Status == EzShop.Domain.Enums.OrderStatus.Returned ? "active" : "")"></div>
+                        <div class="tracker-step @(o.Status == EzShop.Domain.Enums.OrderStatus.InProgress || o.Status == EzShop.Domain.Enums.OrderStatus.Delivered || o.Status == EzShop.Domain.Enums.OrderStatus.Returned ? "active" : "")">
+                            <span class="tracker-dot"></span>
+                            <span class="tracker-label">В работе</span>
+                        </div>
+                        <div class="tracker-line @(o.Status == EzShop.Domain.Enums.OrderStatus.Delivered || o.Status == EzShop.Domain.Enums.OrderStatus.Returned ? "active" : "")"></div>
+                        <div class="tracker-step @(o.Status == EzShop.Domain.Enums.OrderStatus.Delivered ? "active done" : (o.Status == EzShop.Domain.Enums.OrderStatus.Returned ? "active return" : (o.Status == EzShop.Domain.Enums.OrderStatus.Cancelled ? "active cancelled" : "")))">
+                            <span class="tracker-dot"></span>
+                            <span class="tracker-label">@(o.Status == EzShop.Domain.Enums.OrderStatus.Returned ? "Возврат" : (o.Status == EzShop.Domain.Enums.OrderStatus.Cancelled ? "Отменен" : "Доставлен"))</span>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(o.CustomerName))
+                    {
+                        <div class="order-customer-info">
+                            <div><b>Получатель:</b> @o.CustomerName</div>
+                            <div><b>Телефон:</b> @o.CustomerPhone</div>
+                            <div><b>Адрес:</b> @o.CustomerAddress</div>
+                        </div>
+                    }
+
+                    <div class="order-items">
+                        @foreach (var it in o.Items)
+                        {
+                            <div class="order-item">
+                                <span>@it.Name × @it.Qty</span>
+                                <b>@((it.Price * it.Qty).ToString("N0")) сом</b>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="order-total-footer">
+                        <span>Итого к оплате:</span>
+                        <span class="order-total-sum">@o.Total.ToString("N0") сом</span>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Real-time Order Status Synchronizer: синхронизирует статусы заказов из Telegram и Supabase
+        (function() {
+            if (!@((User.Identity?.IsAuthenticated == true).ToString().ToLower())) return;
+
+            function updateTrackerHtml(statusText) {
+                const isCancelled = statusText === 'Отменен';
+                const isInWork = statusText === 'В работе' || statusText === 'Доставлен' || statusText === 'Возврат';
+                const isFinal = statusText === 'Доставлен' || statusText === 'Возврат';
+                const isDelivered = statusText === 'Доставлен';
+                const isReturn = statusText === 'Возврат';
+
+                let finalLabel = 'Доставлен';
+                let finalClass = 'active done';
+                if (isReturn) { finalLabel = 'Возврат'; finalClass = 'active return'; }
+                else if (isCancelled) { finalLabel = 'Отменен'; finalClass = 'active cancelled'; }
+                else if (!isDelivered) { finalClass = ''; }
+
+                return `
+                    <div class="tracker-step active">
+                        <span class="tracker-dot"></span>
+                        <span class="tracker-label">Оформлен</span>
+                    </div>
+                    <div class="tracker-line ${!isCancelled ? 'active' : ''}"></div>
+                    <div class="tracker-step ${!isCancelled ? 'active' : ''}">
+                        <span class="tracker-dot"></span>
+                        <span class="tracker-label">В обработке</span>
+                    </div>
+                    <div class="tracker-line ${isInWork ? 'active' : ''}"></div>
+                    <div class="tracker-step ${isInWork ? 'active' : ''}">
+                        <span class="tracker-dot"></span>
+                        <span class="tracker-label">В работе</span>
+                    </div>
+                    <div class="tracker-line ${isFinal ? 'active' : ''}"></div>
+                    <div class="tracker-step ${finalClass}">
+                        <span class="tracker-dot"></span>
+                        <span class="tracker-label">${finalLabel}</span>
+                    </div>
+                `;
+            }
+
+            function getStatusBadgeConfig(statusText) {
+                switch (statusText) {
+                    case 'В работе': return { cls: 'status-processing', icon: '🔨' };
+                    case 'Доставлен': return { cls: 'status-delivered', icon: '✅' };
+                    case 'Возврат': return { cls: 'status-return', icon: '🔄' };
+                    case 'Отменен': return { cls: 'status-cancelled', icon: '❌' };
+                    default: return { cls: 'status-pending', icon: '⏳' };
+                }
+            }
+
+            async function syncOrderStatus() {
+                try {
+                    const res = await fetch('/Orders/GetMyOrders');
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    if (!data || !data.success || !Array.isArray(data.orders)) return;
+
+                    let needsReload = false;
+                    const renderedCards = document.querySelectorAll('.order-card[data-order-id]');
+                    if (data.orders.length > 0 && renderedCards.length === 0) {
+                        window.location.reload();
+                        return;
+                    }
+
+                    data.orders.forEach(ord => {
+                        const card = document.querySelector(`.order-card[data-order-id="${ord.id}"]`);
+                        if (!card) {
+                            needsReload = true;
+                            return;
+                        }
+
+                        const oldStatus = card.getAttribute('data-order-status');
+                        if (oldStatus !== ord.status) {
+                            card.setAttribute('data-order-status', ord.status);
+                            const badge = document.getElementById(`statusBadge_${ord.id}`);
+                            const tracker = document.getElementById(`tracker_${ord.id}`);
+                            const cfg = getStatusBadgeConfig(ord.status);
+
+                            if (badge) {
+                                badge.className = `order-status-badge ${cfg.cls}`;
+                                badge.innerHTML = `${cfg.icon} ${ord.status}`;
+                            }
+                            if (tracker) {
+                                tracker.innerHTML = updateTrackerHtml(ord.status);
+                            }
+                            if (typeof showToast === 'function') {
+                                showToast(`Статус заказа #${ord.id} обновлен: ${ord.status}`, 'info');
+                            }
+                        }
+                    });
+
+                    if (needsReload) {
+                        window.location.reload();
+                    }
+                } catch (e) {
+                    // тихо игнорируем сетевые сбои
+                }
+            }
+
+            setInterval(syncOrderStatus, 3000);
+        })();
+    </script>
+}

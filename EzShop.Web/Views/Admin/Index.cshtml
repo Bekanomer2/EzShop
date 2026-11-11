@@ -1,0 +1,430 @@
+@model AdminDashboardViewModel
+@{
+    Layout = null;
+    var showAdminAuthLoader = TempData["JustLoggedIn"] != null;
+    var totalCount = Model.Products.Count;
+    var inStockCount = Model.Products.Count(p => p.InStock);
+    var outStockCount = Model.Products.Count(p => !p.InStock);
+    var brandNames = Model.Products.Select(p => p.Brand).Distinct().ToList();
+}
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#070b1a">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap">
+    <script src="/js/theme.js"></script>
+    <title>Админ-панель — EzShop</title>
+    <link rel="stylesheet" href="/style.css?v=20261111_08">
+    <style>
+        @@keyframes loaderPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .loader-logo {
+            animation: loaderIn .5s .12s both, loaderPulse 2.4s 0.6s infinite ease-in-out !important;
+        }
+        :root[data-theme="light"] .logo img,
+        :root[data-theme="light"] .loader-logo,
+        :root[data-theme="light"] .auth-logo {
+            filter: invert(1) hue-rotate(180deg) saturate(1.3) !important;
+        }
+    </style>
+</head>
+
+<body class="admin-body @(showAdminAuthLoader ? "auth-loading" : "")">
+    @if (showAdminAuthLoader)
+    {
+        <div class="loader-overlay" id="pageLoader">
+            <img src="/img/logo.png" alt="Вход в панель управления" class="loader-logo">
+            <div class="loader-bar"><span></span></div>
+        </div>
+    }
+
+    <header class="site-header admin-header">
+        <div class="header-inner">
+            <a href="/" class="logo" aria-label="EzShop — в магазин">
+                <img src="/img/logo.png" alt="EzShop">
+            </a>
+            <div class="admin-header-title">
+                <span class="admin-badge">Admin</span>
+                <h2>Управление магазином</h2>
+            </div>
+            <nav id="nav" class="main-nav" aria-label="Меню администратора">
+                <a href="/Admin" class="active" data-icon="phone">Каталог, бренды и отзывы</a>
+                <a href="/Admin/Orders" data-icon="package">Все заказы</a>
+                <a href="/" data-icon="store">В магазин</a>
+                <div class="user-panel">
+                    <span id="usernameDisplay">@(User.Identity?.Name ?? "admin") 👑 (Admin)</span>
+                    <form asp-controller="Account" asp-action="Logout" method="post" style="display:inline; margin:0;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="admin-logout-btn">Выход</button>
+                    </form>
+                </div>
+            </nav>
+            <div class="burger" id="burger"><span></span><span></span><span></span></div>
+        </div>
+    </header>
+
+    <div class="admin-container">
+        <!-- Статистика каталога (рендеринг C#) -->
+        <div class="admin-stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" data-icon="phone"></div>
+                <div class="stat-info">
+                    <span class="stat-label">Всего смартфонов</span>
+                    <h3 id="statTotalCount">@totalCount</h3>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" data-icon="tag"></div>
+                <div class="stat-info">
+                    <span class="stat-label">Брендов в каталоге</span>
+                    <h3 id="statBrandCount">@brandNames.Count</h3>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon ok" data-icon="check-circle"></div>
+                <div class="stat-info">
+                    <span class="stat-label">В наличии</span>
+                    <h3 id="statInStock">@inStockCount</h3>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bad" data-icon="x-circle"></div>
+                <div class="stat-info">
+                    <span class="stat-label">Нет в наличии</span>
+                    <h3 id="statOutStock">@outStockCount</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Вкладки (сегментированный переключатель) -->
+        <div class="admin-tabs" role="tablist">
+            <button type="button" class="admin-tab-btn active" id="tabBtnProducts" role="tab" onclick="switchAdminTab('products')"><span data-icon="phone"></span>Телефоны</button>
+            <button type="button" class="admin-tab-btn" id="tabBtnBrands" role="tab" onclick="switchAdminTab('brands')"><span data-icon="tag"></span>Бренды</button>
+            <button type="button" class="admin-tab-btn" id="tabBtnReviews" role="tab" onclick="switchAdminTab('reviews')"><span data-icon="star"></span>Отзывы</button>
+        </div>
+
+        <!-- ВКЛАДКА 1: Телефоны -->
+        <div class="admin-tab-content active" id="tabContentProducts">
+            <div class="admin-layout">
+                <div class="admin-table-panel">
+                    <div class="panel-header">
+                        <h3><span data-icon="list"></span>Список телефонов</h3>
+                        <div class="table-actions-header">
+                            <div class="admin-search">
+                                <span data-icon="search"></span>
+                                <input type="text" id="adminSearchInput" class="admin-input-small" placeholder="Поиск модели или бренда" aria-label="Поиск" oninput="filterAdminProducts()">
+                            </div>
+                            <button type="button" class="admin-btn admin-btn-primary" onclick="openProductDrawerNew()"><span data-icon="plus"></span>Добавить телефон</button>
+                        </div>
+                    </div>
+
+                    <div class="admin-filter-chips" id="adminStockChips" role="group" aria-label="Фильтр по наличию">
+                        <button type="button" class="chip is-on" data-stock="all" onclick="setAdminStockFilter('all')">Все</button>
+                        <button type="button" class="chip" data-stock="in" onclick="setAdminStockFilter('in')">В наличии</button>
+                        <button type="button" class="chip" data-stock="out" onclick="setAdminStockFilter('out')">Нет в наличии</button>
+                    </div>
+
+                    <div class="admin-table-wrapper">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Фото</th>
+                                    <th>Название / Бренд</th>
+                                    <th>Память</th>
+                                    <th>Цена</th>
+                                    <th>Наличие</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminProductsTableBody">
+                                @foreach (var p in Model.Products)
+                                {
+                                    <tr data-product-id="@p.Id" data-stock="@(p.InStock ? "in" : "out")">
+                                        <td>
+                                            <img src="@(p.Img.StartsWith("/") ? p.Img : "/" + p.Img)" class="admin-table-thumb" alt="@p.Name" onerror="this.src='/img/logo.png'">
+                                        </td>
+                                        <td>
+                                            <strong>@p.Name</strong><br>
+                                            <small class="admin-brand-tag">@p.Brand</small>
+                                        </td>
+                                        <td>@p.Ram / @p.Storage ГБ</td>
+                                        <td><b>@p.Price.ToString("N0") сом</b></td>
+                                        <td>
+                                            <button type="button" class="stock-chip @(p.InStock ? "in" : "out")" onclick="toggleProductStock(@p.Id)" title="Нажмите, чтобы переключить наличие">
+                                                @(p.InStock ? "● В наличии" : "● Нет в наличии")
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <div class="admin-table-actions">
+                                                <button type="button" class="btn-action-edit" onclick="editProductInAdmin(@p.Id)">Редакт.</button>
+                                                <button type="button" class="btn-action-delete" onclick="deleteProductInAdmin(@p.Id)" aria-label="Удалить @p.Name" title="Удалить">Удалить</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА 2: Бренды -->
+        <div class="admin-tab-content" id="tabContentBrands">
+            <div class="admin-layout">
+                <div class="admin-table-panel">
+                    <div class="panel-header">
+                        <h3><span data-icon="tag"></span>Все бренды в магазине <small class="panel-count">Всего: <b id="brandsListCount">@brandNames.Count</b></small></h3>
+                        <div class="table-actions-header">
+                            <button type="button" class="admin-btn admin-btn-primary" onclick="openBrandDrawerNew()"><span data-icon="plus"></span>Добавить бренд</button>
+                        </div>
+                    </div>
+
+                    <div class="brands-grid" id="adminBrandsGrid">
+                        @foreach (var b in brandNames)
+                        {
+                            var count = Model.Products.Count(x => x.Brand == b);
+                            <div class="brand-admin-card">
+                                <div>
+                                    <h4>@b</h4>
+                                    <small>@count @(count == 1 ? "модель" : "моделей") в каталоге</small>
+                                </div>
+                                <button type="button" class="btn-action-delete" onclick="deleteBrandInAdminByName('@b')" title="Удалить бренд">Удалить</button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ВКЛАДКА 3: Отзывы покупателей -->
+        <div class="admin-tab-content" id="tabContentReviews">
+            <div class="admin-layout">
+                <div class="admin-table-panel">
+                    <div class="panel-header">
+                        <h3><span data-icon="star"></span>Все отзывы покупателей <small class="panel-count">Всего: <b id="reviewsListCount">0</b></small></h3>
+                    </div>
+
+                    <div class="admin-table-wrapper">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Смартфон</th>
+                                    <th>Автор</th>
+                                    <th>Оценка</th>
+                                    <th>Текст отзыва</th>
+                                    <th>Дата</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminReviewsTableBody">
+                                <!-- Рендерится через renderAdminReviews() -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Боковая панель добавления / редактирования телефона -->
+    <aside class="admin-form-panel" id="productDrawer" aria-label="Форма телефона">
+        <div class="panel-header">
+            <h3 id="formTitle">Добавить новый телефон</h3>
+            <button type="button" class="drawer-close" onclick="closeAdminDrawer()" aria-label="Закрыть">&times;</button>
+        </div>
+        <button type="button" id="cancelEditBtn" class="btn-text-small" style="display: none;" onclick="cancelEditing()">Отменить редактирование</button>
+
+        <form id="productForm" onsubmit="handleProductFormSubmit(event)">
+            <input type="hidden" id="editProductId" value="">
+
+            <div class="form-row">
+                <div class="form-group flex-2">
+                    <label for="prodName">Название модели *</label>
+                    <input type="text" id="prodName" class="admin-input" placeholder="Например: iPhone 16 Pro Max" required oninput="updateLivePreview()">
+                </div>
+                <div class="form-group flex-1">
+                    <label for="prodBrand">Бренд *</label>
+                    <select id="prodBrand" class="admin-input" required onchange="updateLivePreview()">
+                        @foreach (var b in brandNames)
+                        {
+                            <option value="@b">@b</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group flex-1">
+                    <label for="prodPrice">Цена (сом) *</label>
+                    <input type="number" id="prodPrice" class="admin-input" placeholder="75000" min="100" required oninput="updateLivePreview()">
+                </div>
+                <div class="form-group flex-1">
+                    <label for="prodColor">Цвет *</label>
+                    <input type="text" id="prodColor" class="admin-input" placeholder="Space Black" required oninput="updateLivePreview()">
+                </div>
+                <div class="form-group flex-1">
+                    <label for="prodInStock">Статус наличия *</label>
+                    <select id="prodInStock" class="admin-input" onchange="updateLivePreview()">
+                        <option value="true" selected>В наличии</option>
+                        <option value="false">Нет в наличии</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group flex-1">
+                    <label for="prodRam">Оперативная память (RAM, ГБ) *</label>
+                    <select id="prodRam" class="admin-input" required onchange="updateLivePreview()">
+                        <option value="4">4 ГБ</option>
+                        <option value="6">6 ГБ</option>
+                        <option value="8" selected>8 ГБ</option>
+                        <option value="12">12 ГБ</option>
+                        <option value="16">16 ГБ</option>
+                        <option value="24">24 ГБ</option>
+                    </select>
+                </div>
+                <div class="form-group flex-1">
+                    <label for="prodStorage">Встроенная память (ROM, ГБ) *</label>
+                    <select id="prodStorage" class="admin-input" required onchange="updateLivePreview()">
+                        <option value="64">64 ГБ</option>
+                        <option value="128">128 ГБ</option>
+                        <option value="256" selected>256 ГБ</option>
+                        <option value="512">512 ГБ</option>
+                        <option value="1024">1024 ГБ (1 ТБ)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group flex-1">
+                    <label for="prodDisplay">Дисплей *</label>
+                    <input type="text" id="prodDisplay" class="admin-input" placeholder="6.7&quot; OLED 120Hz" required oninput="updateLivePreview()">
+                </div>
+                <div class="form-group flex-1">
+                    <label for="prodBattery">Батарея (мАч) *</label>
+                    <input type="number" id="prodBattery" class="admin-input" placeholder="5000" required oninput="updateLivePreview()">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="prodImg">Изображение товара *</label>
+                <div class="image-input-group" style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="prodImg" class="admin-input" placeholder="/img/iPhone 15 pro max.jpg" required oninput="updateLivePreview()">
+                        <select id="presetImages" class="admin-input select-preset" onchange="choosePresetImage(this.value)">
+                            <option value="">Выбрать из галереи</option>
+                            <option value="/img/iPhone 15 pro max.jpg">iPhone 15 Pro Max</option>
+                            <option value="/img/iPhone 14 Pro.jpg">iPhone 14 Pro</option>
+                            <option value="/img/iphone 13.jpg">iPhone 13</option>
+                            <option value="/img/iphone 12 mini.jpg">iPhone 12 Mini</option>
+                            <option value="/img/samsung galaxy s24 ultra.jpg">Samsung S24 Ultra</option>
+                            <option value="/img/samsung s23.webp">Samsung S23</option>
+                            <option value="/img/samsung flip 5.jpg">Samsung Flip 5</option>
+                            <option value="/img/xiaomi 14 ultra.jpg">Xiaomi 14 Ultra</option>
+                            <option value="/img/xiaomi redmi 13.jpg">Xiaomi Redmi 13</option>
+                            <option value="/img/xiaomi 13t pro.jpg">Xiaomi 13T Pro</option>
+                            <option value="/img/pixel 8 pro.jpeg">Pixel 8 Pro</option>
+                            <option value="/img/magic-6-pro.webp">Honor Magic 6</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <label for="fileUploadInput" class="admin-btn admin-btn-secondary" style="margin:0; cursor:pointer; font-size:12.5px; padding:6px 14px; display:inline-flex; align-items:center; gap:6px;">
+                            📁 Загрузить с компьютера
+                            <input type="file" id="fileUploadInput" accept="image/*" style="display:none;" onchange="uploadProductImage(this)">
+                        </label>
+                        <span id="uploadStatus" style="font-size:12px; color:var(--muted);">Поддерживаются: JPG, PNG, WEBP</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="prodDescription">Описание и особенности</label>
+                <textarea id="prodDescription" class="admin-input admin-textarea" rows="3" placeholder="Краткое описание флагманских возможностей смартфона..."></textarea>
+            </div>
+
+            <div class="preview-box">
+                <span class="preview-label">Предпросмотр карточки в каталоге</span>
+                <div class="card preview-card" id="cardPreview">
+                    <img id="prevImg" src="/img/iPhone 15 pro max.jpg" alt="Preview">
+                    <h3 id="prevName">Название модели</h3>
+                    <div class="card-stock in-stock" id="prevStock">● В наличии</div>
+                    <div class="specs" id="prevSpecs">6.7" • 8/256 ГБ<br>5000 мАч • Черный</div>
+                    <div class="price" id="prevPrice">0 сом</div>
+                    <button type="button" id="prevBtn">В корзину</button>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" id="saveProductBtn" class="admin-btn admin-btn-primary">Сохранить телефон</button>
+                <button type="button" class="admin-btn admin-btn-secondary" onclick="resetForm()">Очистить форму</button>
+            </div>
+        </form>
+    </aside>
+
+    <!-- Боковая панель добавления бренда -->
+    <aside class="admin-form-panel" id="brandDrawer" aria-label="Форма бренда">
+        <div class="panel-header">
+            <h3 id="brandFormTitle">Добавить новый бренд</h3>
+            <button type="button" class="drawer-close" onclick="closeAdminDrawer()" aria-label="Закрыть">&times;</button>
+        </div>
+        <form id="brandForm" onsubmit="handleBrandFormSubmit(event)">
+            <input type="hidden" id="editBrandId" value="">
+            <div class="form-group">
+                <label for="brandName">Название бренда *</label>
+                <input type="text" id="brandName" class="admin-input" placeholder="Например: Asus, Sony, Nothing" required>
+            </div>
+            <div class="form-group">
+                <label for="brandCountry">Страна производства *</label>
+                <input type="text" id="brandCountry" class="admin-input" placeholder="Например: Тайвань, Япония, США" required>
+            </div>
+            <div class="form-actions">
+                <button type="submit" id="saveBrandBtn" class="admin-btn admin-btn-primary">Сохранить бренд</button>
+                <button type="button" class="admin-btn admin-btn-secondary" onclick="resetBrandForm()">Очистить форму</button>
+            </div>
+        </form>
+    </aside>
+
+    <div class="admin-scrim" id="adminScrim" onclick="closeAdminDrawer()"></div>
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <script>
+        // Инициализация данных из C# бэкенда (0 мс задержки)
+        window.productsData = @Html.Raw(ViewBag.ProductsJson ?? "[]");
+        window.brandsData = @Html.Raw(ViewBag.BrandsJson ?? "[]");
+        window.reviewsData = @Html.Raw(ViewBag.ReviewsJson ?? "[]");
+    </script>
+    <script src="/js/icons.js?v=20261111_09"></script>
+    <script src="/js/admin.js?v=20261111_09"></script>
+    <script src="/js/admin-ui.js?v=20261111_09"></script>
+    <script src="/js/ui.js?v=20261111_09"></script>
+    <script>
+        if (typeof renderAdminReviews === 'function') {
+            renderAdminReviews();
+        }
+        const pageLoader = document.getElementById('pageLoader');
+        if (pageLoader) {
+            setTimeout(() => {
+                pageLoader.classList.add('hidden');
+                document.body.classList.remove('auth-loading');
+            }, 700);
+        }
+        document.querySelectorAll('[data-icon]').forEach(el => {
+            if (el.querySelector(':scope > svg')) return;
+            const inNav = !!el.closest('nav');
+            const name = el.dataset.icon;
+            if (!name || typeof window.EZ_ICON !== 'function') return;
+            if (el.tagName === 'A') el.insertAdjacentHTML('afterbegin', window.EZ_ICON(name, inNav ? 'nav-ico' : ''));
+            else el.innerHTML = window.EZ_ICON(name);
+        });
+    </script>
+</body>
+</html>
