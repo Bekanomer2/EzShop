@@ -267,6 +267,11 @@
                 document.body.classList.remove('auth-loading');
             }, 700);
         }
+
+        // Фоновый keep-alive пинг каждые 10 минут (пока открыта админка в магазине, облачный сервер не засыпает)
+        setInterval(() => {
+            fetch('/health', { cache: 'no-store' }).catch(() => {});
+        }, 10 * 60 * 1000);
         // Фильтрация и мгновенный поиск по номеру телефона
         function filterAdminOrders() {
             const search = (document.getElementById('orderPhoneSearch')?.value || '').replace(/\D/g, '').toLowerCase();

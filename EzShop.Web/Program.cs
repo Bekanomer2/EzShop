@@ -108,6 +108,9 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Лёгкий эндпоинт для мониторинга и поддержания активности (UptimeRobot / Render)
+app.MapGet("/health", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow })).AllowAnonymous();
+
 // Стандартный маршрут MVC (все остальные прямые маршруты и .html настроены через атрибуты [Route] в контроллерах)
 app.MapControllerRoute(
     name: "default",

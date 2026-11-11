@@ -199,6 +199,13 @@
     <script src="~/js/cart.js" asp-append-version="true"></script>
     <script src="~/js/favorites.js" asp-append-version="true"></script>
     <script src="~/js/compare.js" asp-append-version="true"></script>
+    <script>
+        if (window.currentUser && window.currentUser.role === 'admin') {
+            setInterval(() => {
+                fetch('/health', { cache: 'no-store' }).catch(() => {});
+            }, 10 * 60 * 1000);
+        }
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
