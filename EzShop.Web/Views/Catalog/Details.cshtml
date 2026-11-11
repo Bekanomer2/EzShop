@@ -76,6 +76,29 @@
                 <div class="product-price">@p.Price.ToString("N0") сом</div>
             </div>
 
+            <!-- Калькулятор рассрочки (3, 6 и 12 месяцев) -->
+            <div class="installment-box" id="installmentCalculator" style="margin: 14px 0 18px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span style="font-size:13.5px; font-weight:700; color:var(--text);">💳 Рассрочка 0% без переплат</span>
+                    <span id="installmentTotalHint" style="font-size:12px; color:var(--muted);">без первого взноса</span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:10px;">
+                    <button type="button" class="inst-tab active" data-months="3" onclick="selectInstallment(3, this)" style="padding:8px 6px; border-radius:var(--radius-sm); border:1px solid var(--primary); background:rgba(99,102,241,0.14); color:var(--primary); font-size:12.5px; font-weight:700; cursor:pointer;">
+                        3 мес<br><small style="font-weight:500; opacity:0.9;">@((Math.Ceiling(p.Price / 3m)).ToString("N0")) с/м</small>
+                    </button>
+                    <button type="button" class="inst-tab" data-months="6" onclick="selectInstallment(6, this)" style="padding:8px 6px; border-radius:var(--radius-sm); border:1px solid var(--border); background:transparent; color:var(--text); font-size:12.5px; font-weight:700; cursor:pointer;">
+                        6 мес<br><small style="font-weight:500; opacity:0.8;">@((Math.Ceiling(p.Price / 6m)).ToString("N0")) с/м</small>
+                    </button>
+                    <button type="button" class="inst-tab" data-months="12" onclick="selectInstallment(12, this)" style="padding:8px 6px; border-radius:var(--radius-sm); border:1px solid var(--border); background:transparent; color:var(--text); font-size:12.5px; font-weight:700; cursor:pointer;">
+                        12 мес<br><small style="font-weight:500; opacity:0.8;">@((Math.Ceiling(p.Price / 12m)).ToString("N0")) с/м</small>
+                    </button>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:13.5px; padding-top:8px; border-top:1px dashed var(--border);">
+                    <span style="color:var(--muted);">Ежемесячный платёж:</span>
+                    <strong id="installmentMonthlyResult" style="font-size:16px; color:var(--primary);">@((Math.Ceiling(p.Price / 3m)).ToString("N0")) сом / мес × 3</strong>
+                </div>
+            </div>
+
             <div class="product-specs-grid">
                 <div class="spec-tile">
                     <span class="spec-tile-label">
@@ -331,6 +354,19 @@
             let v = parseInt(el.value) || 1;
             v = Math.max(1, Math.min(10, v + delta));
             el.value = v;
+
+            const basePrice = @p.Price.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            document.querySelectorAll('.inst-tab').forEach(b => {
+                const m = parseInt(b.dataset.months) || 3;
+                const small = b.querySelector('small');
+                if (small) {
+                    small.textContent = `${Math.ceil((basePrice * v) / m).toLocaleString('ru-RU')} с/м`;
+                }
+            });
+            const activeTab = document.querySelector('.inst-tab.active');
+            if (activeTab && typeof selectInstallment === 'function') {
+                selectInstallment(parseInt(activeTab.dataset.months) || 3, activeTab);
+            }
         }
 
         async function deleteReview(reviewId) {
@@ -638,6 +674,31 @@
                 if (typeof showToast === 'function') {
                     showToast(`${prod.name} добавлен в корзину (${qty} шт.) 🛒`, 'success');
                 }
+            }
+        }
+
+        function selectInstallment(months, btnEl) {
+            const basePrice = @p.Price.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            const qty = parseInt(document.getElementById('detailQty')?.value) || 1;
+            const total = basePrice * qty;
+            const perMonth = Math.ceil(total / months);
+
+            document.querySelectorAll('.inst-tab').forEach(b => {
+                b.style.borderColor = 'var(--border)';
+                b.style.background = 'transparent';
+                b.style.color = 'var(--text)';
+                b.classList.remove('active');
+            });
+            if (btnEl) {
+                btnEl.style.borderColor = 'var(--primary)';
+                btnEl.style.background = 'rgba(99,102,241,0.14)';
+                btnEl.style.color = 'var(--primary)';
+                btnEl.classList.add('active');
+            }
+
+            const resEl = document.getElementById('installmentMonthlyResult');
+            if (resEl) {
+                resEl.textContent = `${perMonth.toLocaleString('ru-RU')} сом / мес × ${months}`;
             }
         }
 
