@@ -268,14 +268,74 @@ function choosePresetImage(val) {
     }
 }
 
+// Клиентское сжатие и оптимизация размера изображения (до 900px, WebP/JPEG ~50-120 КБ)
+async function compressImageFile(file, maxDimension = 900, quality = 0.82) {
+    // GIF / мелкие файлы (< 120 КБ) сжимать не обязательно
+    if (file.type === 'image/gif' || file.size <= 120 * 1024) {
+        return file;
+    }
+    return new Promise((resolve) => {
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(file);
+        img.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            let { width, height } = img;
+            if (width > maxDimension || height > maxDimension) {
+                if (width > height) {
+                    height = Math.round((height * maxDimension) / width);
+                    width = maxDimension;
+                } else {
+                    width = Math.round((width * maxDimension) / height);
+                    height = maxDimension;
+                }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            // Если PNG с прозрачностью, сохраняем в WEBP/PNG, иначе в компактный WEBP/JPEG
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const targetType = 'image/webp';
+            canvas.toBlob((blob) => {
+                if (blob && blob.size < file.size) {
+                    const baseName = file.name.replace(/\.[^/.]+$/, '');
+                    resolve(new File([blob], `${baseName}.webp`, { type: targetType }));
+                } else {
+                    resolve(file);
+                }
+            }, targetType, quality);
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            resolve(file);
+        };
+        img.src = objectUrl;
+    });
+}
+
 async function uploadProductImage(fileInput) {
     if (!fileInput || !fileInput.files || !fileInput.files[0]) return;
-    const file = fileInput.files[0];
+    const rawFile = fileInput.files[0];
 
     const statusEl = document.getElementById('uploadStatus');
     if (statusEl) {
-        statusEl.textContent = '⏳ Загрузка...';
+        statusEl.textContent = '⏳ Оптимизация и загрузка...';
         statusEl.style.color = 'var(--primary)';
+    }
+
+    const file = await compressImageFile(rawFile, 900, 0.82);
+
+    if (file.size > 2 * 1024 * 1024) {
+        if (statusEl) {
+            statusEl.textContent = '❌ Файл слишком большой (макс. 2 МБ)';
+            statusEl.style.color = '#f87171';
+        }
+        if (typeof showToast === 'function') {
+            showToast('Размер изображения после сжатия превышает 2 МБ', 'error');
+        }
+        return;
     }
 
     const formData = new FormData();
@@ -292,12 +352,14 @@ async function uploadProductImage(fileInput) {
             const prodImg = document.getElementById('prodImg');
             if (prodImg) prodImg.value = data.url;
             updateLivePreview();
+            const sizeKb = Math.max(1, Math.round(file.size / 1024));
+            const cloudNote = data.storage === 'supabase' ? ' (облако)' : '';
             if (statusEl) {
-                statusEl.textContent = `✅ Загружено: ${file.name}`;
+                statusEl.textContent = `✅ Загружено${cloudNote}: ${sizeKb} КБ`;
                 statusEl.style.color = '#34d399';
             }
             if (typeof showToast === 'function') {
-                showToast(`Фото "${file.name}" успешно загружено!`, 'success');
+                showToast(`Фото "${rawFile.name}" сжато до ${sizeKb} КБ и загружено!`, 'success');
             }
         } else {
             throw new Error(data.message || 'Ошибка загрузки');

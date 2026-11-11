@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using EzShop.BLL.DTO;
 using EzShop.BLL.Interfaces;
 using EzShop.BLL.Services;
@@ -6,6 +7,7 @@ using EzShop.Domain.Enums;
 using EzShop.Domain.Interfaces;
 using EzShop.Web.ViewModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 
 namespace EzShop.Web.Controllers;
 
@@ -15,17 +17,20 @@ public class AdminController : Controller
     private readonly IOrderService _orderService;
     private readonly IBrandRepository _brandRepo;
     private readonly IReviewService _reviewService;
+    private readonly IConfiguration _config;
 
     public AdminController(
         IProductService productService,
         IOrderService orderService,
         IBrandRepository brandRepo,
-        IReviewService reviewService)
+        IReviewService reviewService,
+        IConfiguration config)
     {
         _productService = productService;
         _orderService = orderService;
         _brandRepo = brandRepo;
         _reviewService = reviewService;
+        _config = config;
     }
 
     [HttpGet]
@@ -235,6 +240,11 @@ public class AdminController : Controller
             return BadRequest(new { success = false, message = "Файл не выбран." });
         }
 
+        if (file.Length > 2 * 1024 * 1024)
+        {
+            return BadRequest(new { success = false, message = "Максимальный размер файла — 2 МБ." });
+        }
+
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
         var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif" };
         if (!allowed.Contains(ext))
@@ -242,22 +252,57 @@ public class AdminController : Controller
             return BadRequest(new { success = false, message = "Допустимы только форматы изображений: JPG, PNG, WEBP, AVIF." });
         }
 
+        var fileName = $"phone_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}{ext}";
+
+        // 1. Попытка загрузки в облачное хранилище Supabase Storage (бакет products)
+        var supabaseUrl = (_config["Supabase:Url"] ?? "https://vsxvbrjfuhzvdyzbpjmn.supabase.co").TrimEnd('/');
+        var supabaseKey = _config["Supabase:ServiceKey"] ?? _config["Supabase:AnonKey"] ?? "sb_publishable_aGa3JAz9zF_lQA2swDU43A_UA4fKskN";
+
+        if (!string.IsNullOrEmpty(supabaseUrl) && !string.IsNullOrEmpty(supabaseKey))
+        {
+            try
+            {
+                using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", supabaseKey);
+                httpClient.DefaultRequestHeaders.Add("apikey", supabaseKey);
+
+                using var ms = new MemoryStream();
+                await file.CopyToAsync(ms);
+                var bytes = ms.ToArray();
+
+                using var content = new ByteArrayContent(bytes);
+                content.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(file.ContentType) ? "image/webp" : file.ContentType);
+
+                var uploadEndpoint = $"{supabaseUrl}/storage/v1/object/products/{fileName}";
+                var response = await httpClient.PostAsync(uploadEndpoint, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var publicUrl = $"{supabaseUrl}/storage/v1/object/public/products/{fileName}";
+                    return Ok(new { success = true, url = publicUrl, storage = "supabase" });
+                }
+            }
+            catch
+            {
+                // Если бакет еще не настроен или ошибка сети, переходим к локальному фолбэку ниже
+            }
+        }
+
+        // 2. Резервный локальный фолбэк в wwwroot/uploads (если Supabase Storage не настроен)
         var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
         if (!Directory.Exists(uploadsFolder))
         {
             Directory.CreateDirectory(uploadsFolder);
         }
 
-        var fileName = $"phone_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}{ext}";
         var filePath = Path.Combine(uploadsFolder, fileName);
-
         using (var stream = new FileStream(filePath, FileMode.Create))
         {
             await file.CopyToAsync(stream);
         }
 
         var relativeUrl = $"/uploads/{fileName}";
-        return Ok(new { success = true, url = relativeUrl });
+        return Ok(new { success = true, url = relativeUrl, storage = "local" });
     }
 
     [HttpPost]
