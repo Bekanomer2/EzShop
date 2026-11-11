@@ -332,7 +332,14 @@ public class AdminController : Controller
 
         if (model.Id > 0)
         {
+            var oldProduct = await _productService.GetProductByIdAsync(model.Id);
             var updated = await _productService.UpdateProductAsync(model.Id, req);
+
+            if (oldProduct != null && !string.Equals(oldProduct.Img, imgUrl, StringComparison.OrdinalIgnoreCase))
+            {
+                await TryDeleteImageFileAsync(oldProduct.Img);
+            }
+
             return Ok(new { success = true, product = updated });
         }
         else
@@ -348,8 +355,57 @@ public class AdminController : Controller
     [Route("api/admin/products/{id}")]
     public async Task<IActionResult> DeleteProduct(int id)
     {
+        var product = await _productService.GetProductByIdAsync(id);
         var ok = await _productService.DeleteProductAsync(id);
+
+        if (ok && product != null && !string.IsNullOrWhiteSpace(product.Img))
+        {
+            await TryDeleteImageFileAsync(product.Img);
+        }
+
         return Ok(new { success = ok });
+    }
+
+    private async Task TryDeleteImageFileAsync(string? imgUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imgUrl)) return;
+
+        // 1. Если фото хранится в Supabase Storage (/storage/v1/object/public/products/...)
+        var supabasePrefix = "/storage/v1/object/public/products/";
+        var idx = imgUrl.IndexOf(supabasePrefix, StringComparison.OrdinalIgnoreCase);
+        if (idx >= 0)
+        {
+            var fileName = imgUrl[(idx + supabasePrefix.Length)..].TrimStart('/');
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                var supabaseUrl = (_config["Supabase:Url"] ?? "https://vsxvbrjfuhzvdyzbpjmn.supabase.co").TrimEnd('/');
+                var supabaseKey = _config["Supabase:ServiceKey"] ?? _config["Supabase:AnonKey"] ?? "sb_publishable_aGa3JAz9zF_lQA2swDU43A_UA4fKskN";
+                try
+                {
+                    using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                    httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", supabaseKey);
+                    httpClient.DefaultRequestHeaders.Add("apikey", supabaseKey);
+                    await httpClient.DeleteAsync($"{supabaseUrl}/storage/v1/object/products/{fileName}");
+                }
+                catch { }
+            }
+            return;
+        }
+
+        // 2. Если фото было загружено локально в /uploads/
+        if (imgUrl.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var fileName = Path.GetFileName(imgUrl);
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", fileName);
+                if (System.IO.File.Exists(filePath))
+                {
+                    System.IO.File.Delete(filePath);
+                }
+            }
+            catch { }
+        }
     }
 
     // ==========================================
