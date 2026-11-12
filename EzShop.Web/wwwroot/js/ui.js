@@ -300,6 +300,18 @@
             burger.setAttribute('aria-expanded', String(open));
         };
         new MutationObserver(sync).observe(nav, { attributes: true, attributeFilter: ['class'] });
+        burger.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            const isOpen = nav.classList.toggle('active');
+            burger.classList.toggle('active', isOpen);
+        });
+        nav.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                nav.classList.remove('active');
+                burger.classList.remove('active');
+            });
+        });
         scrim.addEventListener('click', () => { nav.classList.remove('active'); burger.classList.remove('active'); });
         burger.setAttribute('role', 'button');
         burger.setAttribute('tabindex', '0');
