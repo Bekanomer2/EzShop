@@ -57,11 +57,13 @@
             if (el.tagName === 'A') el.insertAdjacentHTML('afterbegin', icon(el.dataset.icon, inNav ? 'nav-ico' : ''));
             else el.innerHTML = icon(el.dataset.icon);
         });
-        const here = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+        const here = (location.pathname || '/').toLowerCase();
         $$('nav a[href]').forEach(a => {
             const href = (a.getAttribute('href') || '').split('#')[0].toLowerCase();
             if (!href || href.startsWith('javascript')) return;
-            if (href === here || (here === '' && href === 'index.html')) a.classList.add('is-active');
+            if (href === here || (here === '/index.html' && href === '/') || (here === '/catalog' && href === '/')) {
+                a.classList.add('is-active');
+            }
         });
     }
 
@@ -80,12 +82,12 @@
     /* ---------- Нижняя навигация (мобильная) ---------- */
     function initBottomNav() {
         if (!$('#nav') || $('.admin-header') || $('.bottom-nav')) return;
-        const here = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+        const here = (location.pathname || '/').toLowerCase();
         const items = [
-            { href: 'index.html', ico: 'grid', label: 'Каталог' },
+            { href: '/', ico: 'grid', label: 'Каталог', match: ['/', '/index.html', '/catalog', '/catalog/index'] },
             { act: 'fav', ico: 'heart', label: 'Избранное', badge: 'fav' },
-            { href: 'cart.html', ico: 'cart', label: 'Корзина', badge: 'cart' },
-            { href: 'orders.html', ico: 'package', label: 'Заказы' },
+            { href: '/Cart', ico: 'cart', label: 'Корзина', badge: 'cart', match: ['/cart', '/cart.html'] },
+            { href: '/Orders', ico: 'package', label: 'Заказы', match: ['/orders', '/orders.html'] },
             { act: 'menu', ico: 'menu', label: 'Меню' }
         ];
         const nav = document.createElement('nav');
@@ -95,7 +97,7 @@
             const inner = icon(it.ico) + '<span>' + it.label + '</span>' +
                 (it.badge ? '<i class="bn-badge" data-badge="' + it.badge + '"></i>' : '');
             if (it.href) {
-                const active = it.href === here ? ' is-active' : '';
+                const active = (it.match && it.match.includes(here)) ? ' is-active' : '';
                 return '<a href="' + it.href + '" class="' + active.trim() + '">' + inner + '</a>';
             }
             return '<button type="button" data-act="' + it.act + '">' + inner + '</button>';
@@ -225,14 +227,14 @@
                 return floating;
             }
         }
-        const bottomNavCart = $('.bottom-nav a[href="cart.html"]');
+        const bottomNavCart = $('.bottom-nav a[href="/Cart"]');
         if (bottomNavCart) {
             const r = bottomNavCart.getBoundingClientRect();
             if (r.width > 0 && r.height > 0 && window.getComputedStyle(bottomNavCart).display !== 'none') {
                 return bottomNavCart;
             }
         }
-        const navCart = $('.main-nav a[href="cart.html"]');
+        const navCart = $('.main-nav a[href="/Cart"]');
         if (navCart) {
             const r = navCart.getBoundingClientRect();
             if (r.width > 0 && r.height > 0 && window.getComputedStyle(navCart).display !== 'none') {
